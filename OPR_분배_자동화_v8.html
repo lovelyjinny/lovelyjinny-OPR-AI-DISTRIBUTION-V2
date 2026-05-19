@@ -1,0 +1,4029 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0F172A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OPR 분배">
+<title>OPR AI 자동분배 시스템</title>
+<meta property="og:title" content="OPR AI 자동분배 시스템">
+<meta property="og:description" content="초도/반응 자동분배 · SAP STO 업로드용 엑셀 생성">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F2F3F5;
+  --surface: #FFFFFF;
+  --surface2: #F7F8FA;
+  --border: #E5E8ED;
+  --border2: #D1D5DB;
+  --text: #191919;
+  --text2: #4B5563;
+  --text3: #9CA3AF;
+  --accent: #FEE500;
+  --accent-dark: #F5D800;
+  --accent-text: #191919;
+  --ok: #00B74A;
+  --ok-bg: #E8F9EF;
+  --warn: #F59E0B;
+  --warn-bg: #FEF3C7;
+  --err: #EF4444;
+  --err-bg: #FEF2F2;
+  --blue: #3B82F6;
+  --blue-bg: #EFF6FF;
+  --purple: #8B5CF6;
+  --purple-bg: #F5F3FF;
+  --navy: #1E2B4A;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+  --sidebar-w: 200px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+/* ── 레이아웃 ── */
+.app { display: flex; min-height: 100vh; }
+.sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--navy); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 100; }
+.main { flex: 1; margin-left: var(--sidebar-w); overflow-y: auto; min-height: 100vh; }
+
+/* ── 사이드바 ── */
+.logo { padding: 24px 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.logo-tag { font-size: 10px; font-weight: 700; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px; }
+.logo-title { font-size: 15px; font-weight: 800; color: #FFFFFF; line-height: 1.3; letter-spacing: -0.02em; }
+.logo-sub { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+.nav { padding: 12px 10px; flex: 1; }
+.nav-section { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.3); padding: 12px 8px 4px; letter-spacing: 0.1em; text-transform: uppercase; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; font-size: 13px; color: rgba(255,255,255,0.55); cursor: pointer; border-radius: var(--radius-sm); transition: all 0.15s; margin-bottom: 2px; font-weight: 500; position: relative; }
+.nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.nav-item.active { color: var(--accent-text); background: var(--accent); font-weight: 700; }
+.nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 6px 4px; }
+
+/* ── 패널 ── */
+.panel { display: none; padding: 28px 28px 40px; max-width: 1000px; }
+.panel.active { display: block; animation: fadeUp 0.2s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.page-header { margin-bottom: 24px; }
+.page-title { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.03em; margin-bottom: 4px; }
+.page-sub { font-size: 13px; color: var(--text3); }
+
+/* ── 카드 ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.card-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 16px; }
+
+/* ── 날씨 배너 ── */
+.weather-banner { background: var(--navy); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; }
+.w-temp { font-size: 30px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.w-up { color: #FF6B6B; }
+.w-down { color: #74C0FC; }
+.w-info { flex: 1; }
+.w-desc { font-size: 12px; color: rgba(255,255,255,0.6); }
+.w-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.w-tag { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
+.tag-ss { background: rgba(239,68,68,0.2); color: #FCA5A5; }
+.tag-fw { background: rgba(59,130,246,0.2); color: #93C5FD; }
+.tag-day { background: rgba(16,185,129,0.2); color: #6EE7B7; }
+.tag-neu { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5); }
+.tag-init { background: rgba(254,229,0,0.2); color: var(--accent); }
+.tag-react { background: rgba(139,92,246,0.2); color: #C4B5FD; }
+
+/* ── 업로드 그리드 ── */
+.upload-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+.upload-card { background: var(--surface); border: 2px dashed var(--border2); border-radius: var(--radius); padding: 20px 16px; cursor: pointer; transition: all 0.2s; min-height: 120px; }
+.upload-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.upload-card.loaded { border-style: solid; border-color: var(--ok); background: var(--ok-bg) !important; }
+.upload-card.loaded .upload-icon { filter: grayscale(0); }
+.upload-card-1 { background: #EEF4FF; border-color: #BFCFFF; }
+.upload-card-1:hover { background: #E0ECFF; border-color: #3B82F6; }
+.upload-card-2 { background: #FFF4EC; border-color: #FFCFA0; }
+.upload-card-2:hover { background: #FFE9D5; border-color: #F97316; }
+.upload-card-3 { background: #EDFFF5; border-color: #A7F0C4; }
+.upload-card-3:hover { background: #D6F9E8; border-color: #10B981; }
+.upload-card-4 { background: #FFF8E1; border-color: #FFE082; }
+.upload-card-4:hover { background: #FFF0B3; border-color: #F59E0B; }
+.upload-icon { font-size: 24px; margin-bottom: 8px; }
+.upload-num { font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 6px; display: flex; align-items: center; gap: 5px; }
+.upload-num .badge-req { background: var(--navy); color: #fff; font-size: 9px; padding: 1px 6px; border-radius: 20px; }
+.upload-num .badge-opt { background: var(--warn-bg); color: var(--warn); font-size: 9px; padding: 1px 6px; border-radius: 20px; }
+.upload-name { font-size: 14px; color: var(--text); font-weight: 700; margin-bottom: 5px; }
+.upload-status { font-size: 11px; color: var(--text3); line-height: 1.4; }
+.upload-card.loaded .upload-status { color: var(--ok); font-weight: 600; }
+
+/* ── 버튼 ── */
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 700; cursor: pointer; border: none; transition: all 0.18s; font-family: inherit; letter-spacing: -0.01em; }
+.btn-primary { background: var(--accent); color: var(--accent-text); }
+.btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(254,229,0,0.4); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-success { background: var(--ok); color: #fff; }
+.btn-success:hover { background: #009A3D; transform: translateY(-1px); }
+.btn-outline { background: transparent; color: var(--text2); border: 1.5px solid var(--border2); }
+.btn-outline:hover { background: var(--surface2); border-color: var(--text3); }
+.btn-navy { background: var(--navy); color: #fff; }
+.btn-navy:hover { background: #263560; }
+.btn-sm { padding: 6px 14px; font-size: 12px; border-radius: 6px; }
+.btn-danger { background: transparent; color: var(--err); border: 1.5px solid var(--border2); }
+.btn-danger:hover { background: var(--err-bg); border-color: var(--err); }
+
+/* ── 진행 박스 ── */
+.progress-box { background: var(--navy); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 12px; display: none; }
+.progress-box.show { display: block; }
+.progress-bar-wrap { background: rgba(255,255,255,0.1); border-radius: 4px; height: 3px; margin-bottom: 14px; }
+.progress-bar { height: 3px; border-radius: 4px; background: var(--accent); transition: width 0.4s; width: 0%; }
+.log-lines { font-family: 'Courier New', monospace; font-size: 12px; max-height: 140px; overflow-y: auto; line-height: 1.8; }
+.log-ok { color: #6EE7B7; }
+.log-info { color: rgba(255,255,255,0.4); }
+.log-warn { color: #FCD34D; }
+.log-err { color: #FCA5A5; }
+
+/* ── 통계 카드 ── */
+.stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 16px; box-shadow: var(--shadow); }
+.stat-label { font-size: 11px; color: var(--text3); margin-bottom: 8px; font-weight: 600; }
+.stat-val { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.stat-val.blue { color: var(--blue); }
+.stat-val.green { color: var(--ok); }
+.stat-val.amber { color: var(--warn); }
+.stat-val.purple { color: var(--purple); }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* ── 테이블 ── */
+.table-wrap { overflow-x: auto; border-radius: var(--radius-sm); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead tr { background: var(--surface2); }
+th { color: var(--text3); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 14px; text-align: left; border-bottom: 2px solid var(--border); white-space: nowrap; }
+td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text2); }
+td:first-child { color: var(--text); font-weight: 500; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+.qty-input { width: 62px; text-align: center; border: 1.5px solid var(--border2); border-radius: 6px; padding: 5px 6px; font-size: 13px; background: var(--surface); color: var(--text); font-family: inherit; font-weight: 600; transition: all 0.15s; }
+.qty-input:focus { outline: none; border-color: var(--navy); background: var(--blue-bg); }
+.qty-input.modified { border-color: var(--warn); background: var(--warn-bg); color: var(--warn); }
+
+/* ── 배지 ── */
+.badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
+.badge-init { background: var(--warn-bg); color: var(--warn); }
+.badge-react { background: var(--purple-bg); color: var(--purple); }
+.badge-ss { background: var(--err-bg); color: var(--err); }
+.badge-fw { background: var(--blue-bg); color: var(--blue); }
+.badge-ok { background: var(--ok-bg); color: var(--ok); }
+.badge-gray { background: var(--surface2); color: var(--text2); }
+
+/* ── 설정 ── */
+.setting-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 14px; font-weight: 500; color: var(--text); }
+.setting-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
+input[type=number], input[type=text] { background: var(--surface2); border: 1.5px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 10px; font-size: 13px; width: 120px; font-family: inherit; transition: all 0.15s; }
+input[type=number]:focus, input[type=text]:focus { outline: none; border-color: var(--navy); background: #fff; }
+select { background: var(--surface2); border: 1.5px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 10px; font-size: 13px; font-family: inherit; cursor: pointer; }
+
+/* ── 진열량 ── */
+.display-table input { width: 65px; text-align: center; }
+.display-table td { padding: 7px 10px; }
+
+/* ── 매장 관리 ── */
+.store-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 6px; display: block; }
+.form-input { width: 100%; background: var(--surface2); border: 1.5px solid var(--border); color: var(--text); border-radius: 6px; padding: 9px 12px; font-size: 13px; font-family: inherit; transition: all 0.15s; }
+.form-input:focus { outline: none; border-color: var(--navy); background: #fff; }
+.preview-box { background: var(--surface2); border-radius: 8px; padding: 14px; margin-top: 8px; font-size: 12px; border: 1px solid var(--border); }
+.store-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--surface2); border-radius: var(--radius-sm); margin-bottom: 8px; border: 1px solid var(--border); transition: all 0.15s; }
+.store-item:hover { border-color: var(--border2); box-shadow: var(--shadow); }
+.store-badge { font-size: 11px; background: var(--blue-bg); color: var(--blue); padding: 3px 9px; border-radius: 20px; font-weight: 700; }
+.store-badge-new { background: var(--ok-bg); color: var(--ok); }
+
+/* ── 에러 박스 ── */
+.error-box { background: var(--err-bg); border: 1.5px solid #FECACA; border-radius: var(--radius-sm); padding: 12px 16px; color: var(--err); font-size: 13px; font-weight: 500; margin-bottom: 14px; display: none; }
+.error-box.show { display: block; }
+
+/* ── 빈 상태 ── */
+.empty-state { text-align: center; padding: 70px 20px; }
+.empty-icon { font-size: 48px; margin-bottom: 14px; opacity: 0.3; }
+.empty-title { font-size: 16px; font-weight: 700; color: var(--text2); margin-bottom: 6px; }
+.empty-sub { font-size: 13px; color: var(--text3); }
+
+/* ── 케파 바 ── */
+.capa-bar-wrap { background: var(--surface2); border-radius: 4px; height: 6px; margin-top: 10px; overflow: hidden; }
+.capa-bar { height: 6px; border-radius: 4px; background: var(--ok); transition: width 0.6s; }
+.capa-bar.warn { background: var(--warn); }
+.capa-bar.over { background: var(--err); }
+
+/* ── 스피너 ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 16px; height: 16px; border: 2.5px solid rgba(25,25,25,0.2); border-top-color: var(--accent-text); border-radius: 50%; animation: spin 0.7s linear infinite; display: none; flex-shrink: 0; }
+.spinner.show { display: inline-block; }
+
+/* ── 섹션 구분선 ── */
+.section-divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* ── 모바일 탭 ── */
+.mobile-tab { display: none; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; padding-bottom: 72px; }
+  .panel { padding: 18px 16px 32px; }
+  .upload-grid { grid-template-columns: 1fr 1fr; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .store-grid { grid-template-columns: 1fr; }
+  .page-title { font-size: 18px; }
+  .mobile-tab { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); z-index: 200; box-shadow: 0 -2px 12px rgba(0,0,0,0.08); }
+  .mobile-tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 4px; font-size: 10px; color: var(--text3); cursor: pointer; gap: 3px; font-weight: 600; transition: color 0.15s; }
+  .mobile-tab-item.active { color: var(--navy); }
+  .mobile-tab-item .tab-icon { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- 사이드바 -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-tag">OPR · AI</div>
+    <div class="logo-title">자동분배<br>시스템</div>
+    <div class="logo-sub">직영점 10개 · MCH2 분배</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">분배</div>
+    <div class="nav-item active" id="nav-dist" onclick="showPanel('dist',this)">
+      <span class="nav-icon">⚡</span> 분배 실행
+    </div>
+    <div class="nav-item" id="nav-result" onclick="showPanel('result',this)">
+      <span class="nav-icon">📊</span> 분배 결과
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">관리</div>
+    <div class="nav-item" id="nav-stores" onclick="showPanel('stores',this)">
+      <span class="nav-icon">🏪</span> 매장 관리
+    </div>
+    <div class="nav-item" id="nav-display" onclick="showPanel('display',this)">
+      <span class="nav-icon">📐</span> 진열량 관리
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-item" id="nav-settings" onclick="showPanel('settings',this)">
+      <span class="nav-icon">⚙️</span> 설정
+    </div>
+  </nav>
+</div>
+
+<!-- 모바일 탭 -->
+<div class="mobile-tab">
+  <div class="mobile-tab-item active" onclick="showPanel('dist',this)"><span class="tab-icon">⚡</span>분배</div>
+  <div class="mobile-tab-item" onclick="showPanel('result',this)"><span class="tab-icon">📊</span>결과</div>
+  <div class="mobile-tab-item" onclick="showPanel('stores',this)"><span class="tab-icon">🏪</span>매장</div>
+  <div class="mobile-tab-item" onclick="showPanel('display',this)"><span class="tab-icon">📐</span>진열량</div>
+  <div class="mobile-tab-item" onclick="showPanel('settings',this)"><span class="tab-icon">⚙️</span>설정</div>
+</div>
+
+<!-- 메인 -->
+<div class="main">
+
+<!-- 분배 실행 패널 -->
+<div class="panel active" id="panel-dist">
+  <div class="page-header">
+    <div class="page-title">분배 실행</div>
+    <div class="page-sub">파일 3개를 업로드하고 분배를 실행하세요 <span style="color:var(--text3)">①②③ 필수</span></div>
+  </div>
+
+  <!-- v7: 분배 모드 선택 -->
+  <div class="card" style="background:linear-gradient(135deg,#f0f4ff 0%,#fef3f9 100%);border:1px solid #d4dbf5">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:14px">
+      <div>
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">분배 모드</div>
+        <div id="mode-display" style="font-size:18px;font-weight:700;color:var(--text)">📦 자유 선택 분배 <span style="font-size:12px;color:var(--text3);font-weight:500">— 매장별 자동 (강서=데일리 / 23지점=주2회)</span></div>
+      </div>
+    </div>
+    <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:12px;color:var(--text2);font-weight:600">📍 출고 대상 매장 <span id="store-count-badge" style="background:#e8f0ff;color:#3b5bdb;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px">0개</span></div>
+        <div style="display:flex;gap:6px">
+          <button onclick="selectAllStores(true)" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer">전체</button>
+          <button onclick="selectAllStores(false)" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer">해제</button>
+          <button onclick="resetToModeDefault()" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer">기본값</button>
+        </div>
+      </div>
+      <div id="store-checklist" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+  </div>
+
+  <!-- 날씨 배너 -->
+  <div class="weather-banner" id="weather-banner" style="display:none">
+    <div id="w-content" style="width:100%;display:flex;align-items:center;gap:16px">
+      <div class="w-temp" id="w-temp">--°</div>
+      <div class="w-info">
+        <div class="w-desc" id="w-desc"></div>
+        <div class="w-tags" id="w-tags"></div>
+      </div>
+    </div>
+  </div>
+  <!-- 업로드 카드 -->
+  <div class="upload-grid">
+    <div id="card-inv" class="upload-card upload-card-1" onclick="pickFile('inv')">
+      <input type="file" id="fi-inv" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this,'inv')">
+      <div class="upload-icon">📦</div>
+      <div class="upload-num">일재고분석 <span class="badge-req">필수</span></div>
+      <div class="upload-name" id="fn-inv">파일 선택</div>
+      <div class="upload-status" id="fs-inv">매장별 현재 보유재고 (여러 개 업로드 가능 - 계절월 매핑용)</div>
+      <div id="fn-inv2" style="font-size:11px;color:var(--text3);margin-top:4px;display:none"></div>
+      <div id="fn-inv3" style="font-size:11px;color:var(--text3);margin-top:4px;display:none"></div>
+    </div>
+    <div id="card-sales" class="upload-card upload-card-2" onclick="pickFile('sales')">
+      <input type="file" id="fi-sales" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this,'sales')">
+      <div class="upload-icon">📈</div>
+      <div class="upload-num">매출상세분석 <span class="badge-req">필수</span></div>
+      <div class="upload-name" id="fn-sales">파일 선택</div>
+      <div class="upload-status" id="fs-sales">매장별 월별 판매수량</div>
+    </div>
+    <div id="card-avail" class="upload-card upload-card-3" onclick="pickFile('avail')">
+      <input type="file" id="fi-avail" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this,'avail')">
+      <div class="upload-icon">🏭</div>
+      <div class="upload-num">가용재고 <span class="badge-req">필수</span></div>
+      <div class="upload-name" id="fn-avail">파일 선택</div>
+      <div class="upload-status" id="fs-avail">물류창고 출고 가능 수량</div>
+      <div id="fn-avail2" style="font-size:11px;color:var(--text3);margin-top:4px;display:none"></div>
+    </div>
+
+  </div>
+
+  <div class="error-box" id="error-box"></div>
+
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+    <button class="btn btn-primary" id="run-btn" onclick="runDistribution()" disabled>
+      <div class="spinner" id="spinner"></div>
+      <span id="btn-text">분배 실행</span>
+    </button>
+    <div style="font-size:13px;color:var(--text3)" id="ready-hint">① 일재고분석 파일을 업로드하세요</div>
+  </div>
+
+  <div class="progress-box" id="progress-box">
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="log-lines" id="log-lines"></div>
+  </div>
+</div>
+
+<!-- 분배 결과 패널 -->
+<div class="panel" id="panel-result">
+  <div class="page-header">
+    <div class="page-title">분배 결과</div>
+    <div class="page-sub">수량을 수동 조정한 후 엑셀로 다운로드하세요</div>
+  </div>
+
+  <div class="empty-state" id="no-result">
+    <div class="empty-icon">📭</div>
+    <div class="empty-title">아직 분배를 실행하지 않았습니다</div>
+    <div class="empty-sub">분배 실행 탭에서 파일을 업로드하고 실행하세요</div>
+  </div>
+
+  <div id="result-box" style="display:none">
+    
+    <!-- v7: 분배 모드 배너 -->
+    <div id="result-mode-banner" style="margin-bottom:14px;padding:10px 14px;border-radius:10px;background:linear-gradient(135deg,#dbeafe 0%,#dcfce7 100%);border:1px solid #d4dbf5;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="result-mode-icon" style="font-size:20px">🔵</span>
+        <div>
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">분배 모드</div>
+          <div id="result-mode-text" style="font-size:14px;font-weight:700;color:var(--text)">주 2회 분배</div>
+        </div>
+      </div>
+      <div id="result-mode-meta" style="font-size:12px;color:var(--text2)"></div>
+    </div>
+    
+    <!-- v7 데일리 모드 전용: 조닝×품종별 입고 쿼터 -->
+    <div class="card" id="daily-zone-item-card" style="display:none;background:linear-gradient(135deg,#f0fdf4 0%,#fef3f9 100%);border:1px solid #d4dbf5">
+      <div class="card-title" style="display:flex;align-items:center;gap:8px">
+        <span>📋 데일리 분배 — 조닝×품종별 입고 쿼터</span>
+        <span style="font-size:11px;color:var(--text3);font-weight:500">(품종확장 = 조닝 내 다른 품종으로 보충)</span>
+      </div>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table style="width:100%;font-size:12.5px;border-collapse:collapse">
+          <thead>
+            <tr style="background:#f9fafb;color:var(--text2)">
+              <th rowspan="2" style="padding:8px;text-align:left;border-bottom:1px solid var(--border)">매장</th>
+              <th rowspan="2" style="padding:8px;text-align:left;border-bottom:1px solid var(--border)">조닝</th>
+              <th rowspan="2" style="padding:8px;text-align:left;border-bottom:1px solid var(--border)">품종</th>
+              <th rowspan="2" style="padding:8px;text-align:center;border-bottom:1px solid var(--border)">총입고</th>
+              <th colspan="2" style="padding:8px;text-align:center;background:#dcfce7;border-bottom:1px solid var(--border);color:#15803d">신상</th>
+              <th colspan="2" style="padding:8px;text-align:center;background:#fed7aa;border-bottom:1px solid var(--border);color:#c2410c">이월</th>
+              <th rowspan="2" style="padding:8px;text-align:left;border-bottom:1px solid var(--border)">신상%</th>
+            </tr>
+            <tr style="background:#f9fafb;color:var(--text2);font-size:11px">
+              <th style="padding:6px;text-align:center;background:#dcfce7;border-bottom:1px solid var(--border)">품종일치</th>
+              <th style="padding:6px;text-align:center;background:#dcfce7;border-bottom:1px solid var(--border)">조닝확장</th>
+              <th style="padding:6px;text-align:center;background:#fed7aa;border-bottom:1px solid var(--border)">품종일치</th>
+              <th style="padding:6px;text-align:center;background:#fed7aa;border-bottom:1px solid var(--border)">조닝확장</th>
+            </tr>
+          </thead>
+          <tbody id="daily-zone-item-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">총 배정 건수</div>
+        <div class="stat-val blue" id="r-count">-</div>
+        <div class="stat-sub">스타일 × 매장</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">총 출고 수량</div>
+        <div class="stat-val green" id="r-qty">-</div>
+        <div class="stat-sub">개 / 가용 <span id="r-avail-total">-</span>개</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">초도 분배</div>
+        <div class="stat-val amber" id="r-init">-</div>
+        <div class="stat-sub">건</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">반응 분배</div>
+        <div class="stat-val purple" id="r-react">-</div>
+        <div class="stat-sub">건</div>
+      </div>
+    </div>
+
+    <!-- 케파 -->
+    <div class="card" id="capa-card" style="display:none">
+      <div class="card-title">물류 출고 케파</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+        <span>총 출고 <b id="capa-used">-</b>개 / 최대 <b id="capa-max">-</b>개</span>
+        <span id="capa-pct" style="font-weight:700;font-size:15px"></span>
+      </div>
+      <div class="capa-bar-wrap"><div class="capa-bar" id="capa-bar"></div></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-success btn-sm" onclick="downloadExcel()">⬇ 엑셀 다운로드</button>
+      <button class="btn btn-outline btn-sm" onclick="showPanel('dist',null)">↩ 다시 실행</button>
+      <span style="font-size:12px;color:var(--text3);margin-left:4px">수량 셀 클릭 → 직접 수정 가능</span>
+    </div>
+
+    <!-- 매장별 현황 -->
+    <div class="card">
+      <div class="card-title">매장별 분배 현황</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>매장</th><th>플랜트</th><th>여성</th><th>남성</th><th>골드라벨(여)</th><th>골드라벨(남)</th><th>잡화</th><th>슈즈</th><th>아동</th><th>합계</th></tr></thead>
+          <tbody id="store-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 상세 내역 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+        <div class="card-title" style="margin-bottom:0">상세 분배 내역 <span style="font-size:11px;color:var(--text3);font-weight:400;text-transform:none">(수량 직접 수정 가능)</span></div>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="search-result" placeholder="상품코드 / 매장 검색" style="width:160px;font-size:12px;padding:6px 10px" oninput="filterResult()">
+          <select id="filter-type" onchange="filterResult()" style="font-size:12px;padding:6px 10px">
+            <option value="">전체</option>
+            <option value="init">초도</option>
+            <option value="react">반응</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>구분</th><th>상품코드</th><th>브랜드</th><th>MC</th><th>상품명</th><th>카테고리</th><th>시즌</th><th>매장</th><th>수량</th><th>가용재고</th><th>적정재고</th><th>현재재고</th></tr></thead>
+          <tbody id="detail-table"></tbody>
+        </table>
+      </div>
+      <div id="detail-nav" style="display:flex;gap:8px;align-items:center;margin-top:12px;justify-content:flex-end"></div>
+    </div>
+
+    <!-- 유사스타일 -->
+    <div class="card" id="similar-card" style="display:none">
+      <div class="card-title">유사스타일 대체 내역</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>원본 스타일</th><th>대체 스타일</th><th>카테고리</th><th>매칭 조건</th><th>이유</th></tr></thead>
+          <tbody id="similar-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 가용재고 추가/교체 선택 모달 -->
+<div id="avail-choice-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:12px;width:min(420px,90vw);padding:24px">
+    <div style="font-size:15px;font-weight:700;color:var(--text1);margin-bottom:8px">가용재고 파일 추가</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:4px">선택한 파일:</div>
+    <div style="font-size:12px;color:var(--blue);font-family:monospace;margin-bottom:16px" id="avail-choice-filename"></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">이미 가용재고 파일이 업로드되어 있습니다. 어떻게 처리할까요?</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary" onclick="applyAvailChoice('merge')" style="text-align:left;padding:12px 16px">
+        <div style="font-weight:700;margin-bottom:2px">📂 추가 (합산)</div>
+        <div style="font-size:12px;opacity:0.8">물류센터별 파일 2개를 합산합니다</div>
+      </button>
+      <button class="btn btn-outline" onclick="applyAvailChoice('replace')" style="text-align:left;padding:12px 16px">
+        <div style="font-weight:700;margin-bottom:2px">🔄 교체 (덮어쓰기)</div>
+        <div style="font-size:12px;opacity:0.8">기존 파일을 새 파일로 교체합니다</div>
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('avail-choice-modal').style.display='none'">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 매장 상세 모달 -->
+<div id="store-detail-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:12px;width:min(600px,90vw);max-height:80vh;overflow-y:auto;padding:24px;position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:16px;font-weight:700;color:var(--text1)" id="store-detail-title"></div>
+      <button onclick="closeStoreDetail()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);line-height:1">×</button>
+    </div>
+    <div id="store-detail-body"></div>
+  </div>
+</div>
+
+<!-- 매장 관리 패널 -->
+<div class="panel" id="panel-stores">
+  <div class="page-header">
+    <div class="page-title">매장 관리</div>
+    <div class="page-sub">직영점 현황 및 신규 매장 등록</div>
+  </div>
+  <div class="card">
+    <div class="card-title">등록된 매장</div>
+    <div id="store-list"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">신규 매장 등록</div>
+    <div class="store-grid">
+      <div>
+        <div class="form-group"><label class="form-label">매장명</label><input class="form-input" id="ns-name" placeholder="예: 홍대점"></div>
+        <div class="form-group"><label class="form-label">플랜트 번호</label><input class="form-input" id="ns-plant" placeholder="예: 8250"></div>
+        <div class="form-group"><label class="form-label">주간 매출 목표액 (원)</label><input class="form-input" id="ns-target" placeholder="예: 15000000" type="number"></div>
+        <div class="form-group">
+          <label class="form-label">분배 모드</label>
+          <select class="form-input" id="ns-mode">
+            <option value="weekly">🔵 주2회 분배</option>
+            <option value="daily">🟢 데일리 분배 (모델점)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div class="form-group">
+          <label class="form-label">카테고리별 평수</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div><label class="form-label" style="font-size:11px">여성(평)</label><input class="form-input" id="ns-w" type="number" placeholder="0" oninput="calcNewStore()"></div>
+            <div><label class="form-label" style="font-size:11px">남성(평)</label><input class="form-input" id="ns-m" type="number" placeholder="0" oninput="calcNewStore()"></div>
+            <div><label class="form-label" style="font-size:11px">아동(평)</label><input class="form-input" id="ns-k" type="number" placeholder="0" oninput="calcNewStore()"></div>
+            <div><label class="form-label" style="font-size:11px">기타(평)</label><input class="form-input" id="ns-etc" type="number" placeholder="0" oninput="calcNewStore()"></div>
+          </div>
+        </div>
+        <div class="preview-box" id="ns-preview" style="display:none">
+          <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">카테고리별 목표 배분</div>
+          <div id="ns-preview-content"></div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-navy btn-sm" onclick="addNewStore()" style="margin-top:12px">매장 등록</button>
+  </div>
+</div>
+
+<!-- 진열량 관리 패널 -->
+<div class="panel" id="panel-display">
+  <div class="page-header">
+    <div class="page-title">진열량 관리</div>
+    <div class="page-sub">직접 입력하거나 적정재고 파일로 불러오세요. 저장하면 다음 분배부터 자동 적용됩니다.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">매장별 카테고리 진열량</div>
+    <div class="table-wrap display-table">
+      <table>
+        <thead><tr><th>매장</th><th>여성</th><th>남성</th><th>골드라벨(여)</th><th>골드라벨(남)</th><th>잡화</th><th>슈즈</th><th>아동</th></tr></thead>
+        <tbody id="display-table-body"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-navy btn-sm" onclick="saveDisplayQty()">💾 저장</button>
+      <button class="btn btn-outline btn-sm" onclick="renderDisplayTable()">초기화</button>
+      <div style="width:1px;height:24px;background:var(--border);margin:0 4px"></div>
+      <input type="file" id="fi-quota-direct" accept=".xlsx,.xls" style="display:none" onchange="loadQuotaFile(this)">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('fi-quota-direct').click()">📂 적정재고 파일로 불러오기</button>
+      <span id="quota-load-status" style="font-size:12px;color:var(--text3)"></span>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 패널 -->
+<div class="panel" id="panel-settings">
+  <div class="page-header">
+    <div class="page-title">설정</div>
+    <div class="page-sub">분배 로직 파라미터를 조정합니다</div>
+  </div>
+  <div class="card">
+    <div class="card-title">분배 기준</div>
+    <div class="setting-row"><div><div class="setting-label">스타일당 기본 분배량</div><div class="setting-desc">초도/반응 모두 적용되는 기본 수량</div></div><input type="number" id="cfg-base" value="3" min="1" max="10"></div>
+    <div class="setting-row"><div><div class="setting-label">초도 분배 비율 (%)</div><div class="setting-desc">신상품 가용재고 중 초도로 내보낼 비율</div></div><input type="number" id="cfg-init-ratio" value="80" min="10" max="100"></div>
+    <div class="setting-row"><div><div class="setting-label">초도 : 반응 출고 비율 (%)</div><div class="setting-desc">전체 출고 물량 중 초도 비율. 예) 70 → 초도 70% : 반응 30%</div></div><input type="number" id="cfg-init-react-ratio" value="60" min="10" max="90"></div>
+
+    <div class="setting-row"><div><div class="setting-label">유사스타일 가격 허용 범위 (%)</div><div class="setting-desc">최초판매가 및 현판가 ±% 이내 스타일만 인정</div></div><input type="number" id="cfg-price" value="30" min="5" max="80"></div>
+    <div class="setting-row"><div><div class="setting-label">소량 재고 기준 (개)</div><div class="setting-desc">이 수량 미만이면 소량 처리</div></div><input type="number" id="cfg-small" value="20" min="5" max="100"></div>
+  </div>
+
+  <!-- 옵션 3: 연휴 보정 + 추세 반영 -->
+  <div class="card">
+    <div class="card-title">📅 매출 예측 / 연휴 보정 (옵션 3)</div>
+    <div class="setting-row"><div><div class="setting-label">옵션 3 사용</div><div class="setting-desc">체크 시 보정 로직 적용 (베이스라인 가중평균 + 트렌드 + 날씨 + 연휴 + 아동)</div></div><input type="checkbox" id="cfg-opt3-on"></div>
+    
+    <div class="setting-row"><div><div class="setting-label">분배 대상 일자</div><div class="setting-desc">출고할 날짜 모두 체크 (베이스라인을 합산해서 분배)</div></div>
+      <div id="cfg-opt3-dates" style="display:flex;flex-wrap:wrap;gap:6px;max-width:400px;justify-content:flex-end">
+        <span style="font-size:11px;color:var(--text3)">매출 파일 업로드 시 자동 생성</span>
+      </div>
+    </div>
+    
+    <div class="setting-row"><div><div class="setting-label">트렌드 보정률 (%)</div><div class="setting-desc">전체에 곱하기. 보고서 기준 16%</div></div><input type="number" id="cfg-opt3-trend" value="16" min="-50" max="100"></div>
+    
+    <div class="setting-row"><div><div class="setting-label">최근 가중치 (배)</div><div class="setting-desc">최근 7일에 적용할 가중치. 그 이전은 1배. 추세 반영용</div></div><input type="number" id="cfg-opt3-weight" value="2" min="1" max="5" step="0.5"></div>
+    
+    <div class="setting-row"><div><div class="setting-label">아동 가산률 (%)</div><div class="setting-desc">아동(1K) MC에 가산. 5/1~5/5 같은 어린이날 직전</div></div><input type="number" id="cfg-opt3-child" value="25" min="0" max="100"></div>
+    
+    <div class="setting-row"><div><div class="setting-label">아동 가산 적용 일자</div><div class="setting-desc">YYYY-MM-DD 콤마 구분 (예: 2026-05-01,2026-05-02,2026-05-03,2026-05-04,2026-05-05)</div></div><input type="text" id="cfg-opt3-child-dates" value="" style="width:280px;font-size:11px"></div>
+    
+    <div class="setting-row" style="flex-direction:column;align-items:stretch">
+      <div style="margin-bottom:8px"><div class="setting-label">📅 일자별 연휴 보정률 (%)</div><div class="setting-desc">출고 불가 또는 휴일 보정. 형식: YYYY-MM-DD=숫자, 줄바꿈 구분</div></div>
+      <textarea id="cfg-opt3-holiday" rows="6" style="font-family:monospace;font-size:11px;width:100%" placeholder="2026-05-01=75
+2026-05-02=15
+2026-05-03=25
+2026-05-04=50
+2026-05-05=75"></textarea>
+    </div>
+    
+    <div class="setting-row" style="flex-direction:column;align-items:stretch">
+      <div style="margin-bottom:8px"><div class="setting-label">🌤 MC1 날씨 보정률 (%)</div><div class="setting-desc">형식: MC1명=숫자, 줄바꿈 구분</div></div>
+      <textarea id="cfg-opt3-mc1" rows="7" style="font-family:monospace;font-size:11px;width:100%" placeholder="반팔상의=25
+원피스=30
+셔츠=15
+점퍼=-15
+자켓=-10"></textarea>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">물류 출고 케파</div>
+    <div class="setting-row"><div><div class="setting-label">스타일 최소 가용수량</div><div class="setting-desc">이 수량 미만인 스타일은 분배 제외 (기본 1개)</div></div><input type="number" id="cfg-min-avail" value="1" min="1" max="50"></div>
+    <div class="setting-row"><div><div class="setting-label">1일 최대 출고 수량</div><div class="setting-desc">0이면 제한 없음. 초도 우선 → 반응 순으로 적용</div></div><input type="number" id="cfg-capa" value="0" min="0"></div>
+    <div class="setting-row"><div><div class="setting-label">매장×SKU당 최대 분배 수량</div><div class="setting-desc"><b style="color:#dc2626">★ 데일리 분배에서 가장 중요</b> — 한 매장에 같은 스타일을 최대 몇 장까지 (기본 3개)</div></div><input type="number" id="cfg-max-per-sku" value="3" min="1" max="50"></div>
+  </div>
+  
+  <!-- v7: 분배 대상 토글 -->
+  <div class="card">
+    <div class="card-title">🎯 분배 대상 설정</div>
+    <div class="setting-row" style="cursor:pointer" onclick="toggleSetting('includeChildren')">
+      <div>
+        <div class="setting-label">아동 (1K) 포함</div>
+        <div class="setting-desc">키즈/아동 카테고리(1K) 분배 포함 여부 (기본 ON)</div>
+      </div>
+      <div id="toggle-children" style="position:relative;width:50px;height:28px;background:#10b981;border-radius:14px;transition:background .2s">
+        <div style="position:absolute;top:2px;left:24px;width:24px;height:24px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+      </div>
+    </div>
+    <div class="setting-row" style="cursor:pointer" onclick="toggleSetting('includeZara')">
+      <div>
+        <div class="setting-label">자라 / 마시모두띠 포함</div>
+        <div class="setting-desc">자라키즈, ZARA, 마시모두띠(MASSIMO) 브랜드 분배 포함 여부 (기본 OFF)</div>
+      </div>
+      <div id="toggle-zara" style="position:relative;width:50px;height:28px;background:#cbd5e1;border-radius:14px;transition:background .2s">
+        <div style="position:absolute;top:2px;left:2px;width:24px;height:24px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">요일별 가중치 (2025년 실적 기반)</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:4px">
+      <div style="text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">월</div><input type="number" id="dow-0" value="0.64" step="0.01" style="width:100%;text-align:center;padding:6px 4px"></div>
+      <div style="text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">화</div><input type="number" id="dow-1" value="0.70" step="0.01" style="width:100%;text-align:center;padding:6px 4px"></div>
+      <div style="text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">수</div><input type="number" id="dow-2" value="1.09" step="0.01" style="width:100%;text-align:center;padding:6px 4px"></div>
+      <div style="text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">목</div><input type="number" id="dow-3" value="0.88" step="0.01" style="width:100%;text-align:center;padding:6px 4px"></div>
+      <div style="text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">금</div><input type="number" id="dow-4" value="1.00" step="0.01" style="width:100%;text-align:center;padding:6px 4px"></div>
+      <div style="text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">토</div><input type="number" id="dow-5" value="1.46" step="0.01" style="width:100%;text-align:center;padding:6px 4px"></div>
+      <div style="text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px">일</div><input type="number" id="dow-6" value="1.22" step="0.01" style="width:100%;text-align:center;padding:6px 4px"></div>
+    </div>
+  </div>
+  
+  <!-- v7: 분배 이력 / 마지막 분배일 -->
+  <div class="card">
+    <div class="card-title">📆 분배 이력</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
+      주 2회 모드는 <b>마지막 분배일 다음날부터 D-1까지</b>의 매출을 누적해 분배합니다.<br>
+      데일리 모드는 <b>D-1 매출만</b> 사용합니다 (월요일은 금/토/일 3일치).
+    </div>
+    <div style="background:#f9fafb;padding:10px;border-radius:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase">마지막 주2회 분배일</div>
+          <div id="last-dist-date" style="font-size:14px;font-weight:700;color:var(--text);margin-top:2px">-</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="resetLastDistDate()" title="기록 초기화 (다음 주2회 분배 시 매출 파일 전체 사용)">🗑️ 기록 초기화</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- v7: 공휴일 관리 -->
+  <div class="card">
+    <div class="card-title">📅 공휴일 관리 (2026)</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">데일리 분배에서 공휴일은 자동으로 처리됩니다. 임시공휴일이 지정되면 아래에서 추가하세요.</div>
+    
+    <div style="background:#f9fafb;padding:10px;border-radius:8px;margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">2026년 법정 공휴일 (자동 적용)</div>
+      <div id="default-holidays-list" style="display:flex;flex-wrap:wrap;gap:4px;font-size:11px"></div>
+    </div>
+    
+    <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px">
+        <label class="form-label" style="font-size:11px">날짜</label>
+        <input type="date" id="custom-holiday-date" class="form-input" min="2026-01-01" max="2026-12-31">
+      </div>
+      <div style="flex:2;min-width:160px">
+        <label class="form-label" style="font-size:11px">사유</label>
+        <input type="text" id="custom-holiday-name" class="form-input" placeholder="예: 임시공휴일">
+      </div>
+      <button class="btn btn-navy btn-sm" onclick="addCustomHoliday()">➕ 추가</button>
+    </div>
+    
+    <div style="margin-top:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">사용자 추가 공휴일</div>
+      <div id="custom-holidays-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    </div>
+  </div>
+  
+  <button class="btn btn-navy btn-sm" onclick="alert('설정이 저장되었습니다')">설정 저장</button>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── pickFile ───────────────────────────────────────────────────────────
+function pickFile(key) {
+  var el = document.getElementById('fi-' + key);
+  if (el) el.click();
+}
+
+// ── 상수 (v7: 새 7조닝 체계) ──────────────────────────────────────────
+const CAT_LABELS = ['여성','남성','골드라벨(여)','골드라벨(남)','잡화','슈즈','아동'];
+
+// MCH2 → 조닝 매핑 (BW 표준 + 확장)
+const MCH2_CAT = {
+  '1W':'여성','1M':'남성','1K':'아동','1L':'잡화','1C':'잡화',
+  '2W':'골드라벨(여)','2M':'골드라벨(남)'
+};
+const MCH2_QUOTA_CAT = MCH2_CAT;
+const SEASON_MONTH_MAP = {'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'T':10,'N':11,'D':12};
+
+// 옵션 3: MC 코드 → MC1 카테고리 매핑 (사용자 제공 232개)
+const MC_TO_MC1 = {
+  '1MSHSN':'슈즈','1WCALL':'긴팔상의','1MSHSL':'슈즈','1WCAHH':'반팔상의','1WSUTM':'하의',
+  'CLIXA1':'기타','1MCAJJ':'점퍼','1MSUJK':'자켓','1MSUKK':'긴팔상의','1MCAHH':'반팔상의',
+  '1MCALL':'긴팔상의','1MHTAP':'잡화','1WBGBK':'잡화','1MACAC':'잡화','1WSUOW':'원피스',
+  '1WCAJK':'자켓','1WCAJP':'점퍼','1KTDIW':'내의세트','1MSHSH':'슈즈','1MCATC':'하의',
+  '1MSPJJ':'점퍼','1MSUTM':'하의','1WCATC':'하의','1WSPJJ':'점퍼','1MSPHH':'반팔상의',
+  '1MSUYS':'셔츠','1WCAOW':'원피스','2WCAHH':'반팔상의','1MCATH':'하의','1MCAJK':'자켓',
+  '1WHTAP':'잡화','1WCAYS':'셔츠','1WCABL':'셔츠','1WSUJK':'자켓','1WCAKK':'긴팔상의',
+  '1WSUBL':'셔츠','1MGOPK':'긴팔상의','1WCAJJ':'점퍼','2MCAHH':'반팔상의','1MSPTH':'하의',
+  '1MSUTC':'하의','1MCAJP':'점퍼','1WCACC':'긴팔상의','1WGOHH':'반팔상의','1WCAHD':'긴팔상의',
+  '1WSUTC':'하의','1WSUSK':'하의','1MHTAT':'잡화','1WCASK':'하의','1WACAC':'잡화',
+  '1MSPTC':'하의','TCTMA1':'하의','1MBGBK':'잡화','1MSPPK':'긴팔상의','1MCAPK':'긴팔상의',
+  '2MCATH':'하의','1MCAMA':'긴팔상의','1WBGPC':'잡화','1WSHSH':'슈즈','2WBGBK':'잡화',
+  '1MCATJ':'하의','PKHHA1':'반팔상의','1WSPHH':'반팔상의','1WSPTC':'하의','1MSPHD':'긴팔상의',
+  '1MSUTH':'하의','1MSPMM':'긴팔상의','1WACHA':'잡화','2WSHSH':'슈즈','2MBGBK':'잡화',
+  '1WSUKK':'긴팔상의','2WSUTM':'하의','2MCAYS':'셔츠','1KKDTH':'하의','1WHTHA':'잡화',
+  '1MCAYS':'셔츠','2MCAHD':'긴팔상의','1WUWSO':'잡화','1WSUJT':'자켓','1KKDOW':'원피스',
+  '1KKDHH':'반팔상의','1MGOTC':'하의','1WGOSK':'하의','1MUWRU':'잡화','1WSHSN':'슈즈',
+  '1WSPMM':'긴팔상의','1WCATJ':'하의','2WCAYS':'셔츠','1KKDTC':'하의','2WSHSN':'슈즈',
+  '1LFUFU':'잡화','2MCAPK':'긴팔상의','2MCAJK':'자켓','1WCAJV':'조끼','2WCATC':'하의',
+  '2WSUKK':'긴팔상의','1MCAHD':'긴팔상의','1MGOJP':'점퍼','CCKKA1':'긴팔상의','1WSPPK':'긴팔상의',
+  'CSYSA1':'셔츠','1WSUCC':'긴팔상의','2WSUSK':'하의','2MCAMA':'긴팔상의','1WCARN':'반팔상의',
+  '2MACAC':'잡화','2WCAPK':'긴팔상의','1MGOYS':'셔츠','1MCAKK':'긴팔상의','1WCAHZ':'점퍼',
+  '1WSPSK':'하의','1WCAPK':'긴팔상의','1MGOHH':'반팔상의','1KKDIW':'내의세트','1WSUYS':'셔츠',
+  '2WUWSO':'잡화','2WSUBL':'셔츠','2WSUTC':'하의','2WSUOW':'원피스','1MSPLL':'긴팔상의',
+  '1WCAMM':'긴팔상의','1WCATH':'하의','2MSHSN':'슈즈','1KKDLL':'긴팔상의','1WCAMA':'긴팔상의',
+  '2MCAJP':'점퍼','1WSPLL':'긴팔상의','2WCAJK':'자켓','1WSPTH':'하의','2WSUJK':'자켓',
+  'TCTHA1':'하의','1WCAJT':'자켓','2MGOPK':'긴팔상의','2WCALL':'긴팔상의','1MSPMA':'긴팔상의',
+  '2MHTAP':'잡화','2WCAOW':'원피스','2MBGWA':'잡화','2WCAMM':'긴팔상의','1WUWRU':'잡화',
+  '1MSUCC':'긴팔상의','1MACHA':'잡화','2MCACC':'긴팔상의','2WBGPC':'잡화','1WGOLL':'긴팔상의',
+  '1WSPTS':'하의','1WGOOW':'원피스','1WSPHD':'긴팔상의','2WCAHD':'긴팔상의','2MACHA':'잡화',
+  '1WACBE':'잡화','1LLILI':'잡화','2WACHA':'잡화','2WCAMA':'긴팔상의','2WCABL':'셔츠',
+  '2WSHSL':'슈즈','1WSUTH':'하의','1WSPJP':'점퍼','2MCATC':'하의','1KKDSN':'슈즈',
+  '2MCATJ':'하의','2MSPHH':'반팔상의','2WGOTC':'하의','2MSHSL':'슈즈','2WSPHH':'반팔상의',
+  '1MSPJP':'점퍼','2WACAC':'잡화','1MSPTS':'하의','PKMAA1':'긴팔상의','2WGOPK':'긴팔상의',
+  '2MSPMA':'긴팔상의','2MCAJD':'점퍼','2MSPLL':'긴팔상의','2MCALL':'긴팔상의','2MSUJV':'조끼',
+  '2MACMU':'잡화','1MCAJV':'조끼','CESLA1':'잡화','1KKDMM':'상하세트','1MCAJD':'점퍼',
+  '1MCAJT':'자켓','1MCAMM':'긴팔상의','CEACA1':'잡화','JJJJA1':'점퍼','OWOKA1':'원피스',
+  '2WSUTH':'하의','2WSUJT':'자켓','1MSPHZ':'점퍼','2WCATJ':'하의','2WSPLL':'긴팔상의',
+  '2WSPSK':'하의','2WHTAP':'잡화','2WGOHH':'반팔상의','1MGOKK':'긴팔상의','2WCAKK':'긴팔상의',
+  '2WCATH':'하의','BKBKA1':'잡화','BKCBA1':'잡화','2MGOKK':'긴팔상의','2MGOTC':'하의',
+  '2MECMX':'기타','1MACNE':'잡화','SHSHA1':'슈즈','2WCAJP':'점퍼','2WBGWA':'잡화',
+  '2WBGTC':'잡화','2WCACC':'긴팔상의','2WCAJJ':'점퍼','2WACBE':'잡화','2MGOJV':'조끼',
+  '2MSPKK':'긴팔상의','2MSPJP':'점퍼','2MSHSH':'슈즈','2MSPFT':'기타','2MCAJT':'자켓',
+  '2WGOJK':'자켓','OWOWA1':'원피스','CEAHA1':'잡화','TCTCA1':'하의','PKPKA1':'셔츠',
+  'PKLLA1':'긴팔상의','1LKTTA':'잡화','WHSKA1':'하의','1MCACC':'긴팔상의','1CACAC':'잡화',
+  'VVJVA1':'조끼','1WACMU':'잡화','1WSUJV':'조끼','2WSUCC':'긴팔상의','2MSPTC':'하의',
+  'PKHDA1':'긴팔상의'
+};
+
+// MC 코드 → 조닝/품종 매핑 (224개 BW MC 검증된 매핑)
+const MC_ZONE_MAP = {
+  '1CACAC':{z:'잡화',i:'잡화기타'},
+  '1KKDHH':{z:'아동',i:'이너상의'},
+  '1KKDIW':{z:'아동',i:'잡화기타'},
+  '1KKDLL':{z:'아동',i:'이너상의'},
+  '1KKDMM':{z:'아동',i:'이너상의'},
+  '1KKDOW':{z:'아동',i:'원피스'},
+  '1KKDSN':{z:'슈즈',i:'슈즈'},
+  '1KKDTC':{z:'아동',i:'하의'},
+  '1KKDTH':{z:'아동',i:'하의'},
+  '1KTDIW':{z:'아동',i:'잡화기타'},
+  '1LFUFU':{z:'잡화',i:'리빙'},
+  '1LKTTA':{z:'잡화',i:'리빙'},
+  '1LLILI':{z:'잡화',i:'잡화기타'},
+  '1MACAC':{z:'남성',i:'잡화기타'},
+  '1MACHA':{z:'남성',i:'잡화기타'},
+  '1MACNE':{z:'남성',i:'잡화기타'},
+  '1MBGBK':{z:'남성',i:'가방'},
+  '1MCACC':{z:'남성',i:'이너상의'},
+  '1MCAHD':{z:'남성',i:'이너상의'},
+  '1MCAHH':{z:'남성',i:'이너상의'},
+  '1MCAJD':{z:'남성',i:'아우터'},
+  '1MCAJJ':{z:'남성',i:'아우터'},
+  '1MCAJK':{z:'남성',i:'아우터'},
+  '1MCAJP':{z:'남성',i:'아우터'},
+  '1MCAJT':{z:'남성',i:'아우터'},
+  '1MCAJV':{z:'남성',i:'아우터'},
+  '1MCAKK':{z:'남성',i:'이너상의'},
+  '1MCALL':{z:'남성',i:'이너상의'},
+  '1MCAMA':{z:'남성',i:'이너상의'},
+  '1MCAMM':{z:'남성',i:'이너상의'},
+  '1MCAPK':{z:'남성',i:'이너상의'},
+  '1MCATC':{z:'남성',i:'하의'},
+  '1MCATH':{z:'남성',i:'하의'},
+  '1MCATJ':{z:'남성',i:'하의'},
+  '1MCAYS':{z:'남성',i:'이너상의'},
+  '1MGOHH':{z:'남성',i:'이너상의'},
+  '1MGOJP':{z:'남성',i:'아우터'},
+  '1MGOKK':{z:'남성',i:'이너상의'},
+  '1MGOPK':{z:'남성',i:'이너상의'},
+  '1MGOTC':{z:'남성',i:'하의'},
+  '1MGOYS':{z:'남성',i:'이너상의'},
+  '1MHTAP':{z:'남성',i:'이너상의'},
+  '1MHTAT':{z:'남성',i:'잡화기타'},
+  '1MSHSH':{z:'슈즈',i:'슈즈'},
+  '1MSHSL':{z:'슈즈',i:'슈즈'},
+  '1MSHSN':{z:'슈즈',i:'슈즈'},
+  '1MSPHD':{z:'남성',i:'이너상의'},
+  '1MSPHH':{z:'남성',i:'이너상의'},
+  '1MSPHZ':{z:'남성',i:'이너상의'},
+  '1MSPJJ':{z:'남성',i:'아우터'},
+  '1MSPJP':{z:'남성',i:'아우터'},
+  '1MSPLL':{z:'남성',i:'이너상의'},
+  '1MSPMA':{z:'남성',i:'이너상의'},
+  '1MSPMM':{z:'남성',i:'이너상의'},
+  '1MSPPK':{z:'남성',i:'이너상의'},
+  '1MSPTC':{z:'남성',i:'하의'},
+  '1MSPTH':{z:'남성',i:'하의'},
+  '1MSPTS':{z:'남성',i:'하의'},
+  '1MSUCC':{z:'남성',i:'이너상의'},
+  '1MSUJK':{z:'남성',i:'아우터'},
+  '1MSUKK':{z:'남성',i:'이너상의'},
+  '1MSUTC':{z:'남성',i:'하의'},
+  '1MSUTM':{z:'남성',i:'하의'},
+  '1MSUYS':{z:'남성',i:'이너상의'},
+  '1MUWRU':{z:'남성',i:'잡화기타'},
+  '1WACAC':{z:'여성',i:'잡화기타'},
+  '1WACBE':{z:'여성',i:'잡화기타'},
+  '1WACHA':{z:'여성',i:'잡화기타'},
+  '1WACMU':{z:'여성',i:'잡화기타'},
+  '1WBGBK':{z:'여성',i:'가방'},
+  '1WBGPC':{z:'여성',i:'가방'},
+  '1WCABL':{z:'여성',i:'이너상의'},
+  '1WCACC':{z:'여성',i:'이너상의'},
+  '1WCAHD':{z:'여성',i:'이너상의'},
+  '1WCAHH':{z:'여성',i:'이너상의'},
+  '1WCAHZ':{z:'여성',i:'이너상의'},
+  '1WCAJJ':{z:'여성',i:'아우터'},
+  '1WCAJK':{z:'여성',i:'아우터'},
+  '1WCAJP':{z:'여성',i:'아우터'},
+  '1WCAJT':{z:'여성',i:'아우터'},
+  '1WCAJV':{z:'여성',i:'아우터'},
+  '1WCAKK':{z:'여성',i:'이너상의'},
+  '1WCALL':{z:'여성',i:'이너상의'},
+  '1WCAMA':{z:'여성',i:'이너상의'},
+  '1WCAMM':{z:'여성',i:'이너상의'},
+  '1WCAOW':{z:'여성',i:'원피스'},
+  '1WCAPK':{z:'여성',i:'이너상의'},
+  '1WCARN':{z:'여성',i:'이너상의'},
+  '1WCASK':{z:'여성',i:'하의'},
+  '1WCATC':{z:'여성',i:'하의'},
+  '1WCATH':{z:'여성',i:'하의'},
+  '1WCATJ':{z:'여성',i:'하의'},
+  '1WCAYS':{z:'여성',i:'이너상의'},
+  '1WGOHH':{z:'여성',i:'이너상의'},
+  '1WGOLL':{z:'여성',i:'이너상의'},
+  '1WGOOW':{z:'여성',i:'원피스'},
+  '1WGOSK':{z:'여성',i:'하의'},
+  '1WHTAP':{z:'여성',i:'이너상의'},
+  '1WHTHA':{z:'여성',i:'잡화기타'},
+  '1WSHSH':{z:'슈즈',i:'슈즈'},
+  '1WSHSN':{z:'슈즈',i:'슈즈'},
+  '1WSPHD':{z:'여성',i:'이너상의'},
+  '1WSPHH':{z:'여성',i:'이너상의'},
+  '1WSPJJ':{z:'여성',i:'아우터'},
+  '1WSPJP':{z:'여성',i:'아우터'},
+  '1WSPLL':{z:'여성',i:'이너상의'},
+  '1WSPMM':{z:'여성',i:'이너상의'},
+  '1WSPPK':{z:'여성',i:'이너상의'},
+  '1WSPSK':{z:'여성',i:'하의'},
+  '1WSPTC':{z:'여성',i:'하의'},
+  '1WSPTH':{z:'여성',i:'하의'},
+  '1WSPTS':{z:'여성',i:'하의'},
+  '1WSUBL':{z:'여성',i:'이너상의'},
+  '1WSUCC':{z:'여성',i:'이너상의'},
+  '1WSUJK':{z:'여성',i:'아우터'},
+  '1WSUJT':{z:'여성',i:'아우터'},
+  '1WSUJV':{z:'여성',i:'아우터'},
+  '1WSUKK':{z:'여성',i:'이너상의'},
+  '1WSUOW':{z:'여성',i:'원피스'},
+  '1WSUSK':{z:'여성',i:'하의'},
+  '1WSUTC':{z:'여성',i:'하의'},
+  '1WSUTH':{z:'여성',i:'하의'},
+  '1WSUTM':{z:'여성',i:'하의'},
+  '1WSUYS':{z:'여성',i:'이너상의'},
+  '1WUWRU':{z:'여성',i:'잡화기타'},
+  '1WUWSO':{z:'여성',i:'잡화기타'},
+  '2MACAC':{z:'골드라벨(남)',i:'잡화기타'},
+  '2MACHA':{z:'골드라벨(남)',i:'잡화기타'},
+  '2MACMU':{z:'골드라벨(남)',i:'잡화기타'},
+  '2MBGBK':{z:'골드라벨(남)',i:'가방'},
+  '2MBGWA':{z:'골드라벨(남)',i:'가방'},
+  '2MCACC':{z:'골드라벨(남)',i:'이너상의'},
+  '2MCAHD':{z:'골드라벨(남)',i:'이너상의'},
+  '2MCAHH':{z:'골드라벨(남)',i:'이너상의'},
+  '2MCAJD':{z:'골드라벨(남)',i:'아우터'},
+  '2MCAJK':{z:'골드라벨(남)',i:'아우터'},
+  '2MCAJP':{z:'골드라벨(남)',i:'아우터'},
+  '2MCALL':{z:'골드라벨(남)',i:'이너상의'},
+  '2MCAMA':{z:'골드라벨(남)',i:'이너상의'},
+  '2MCAPK':{z:'골드라벨(남)',i:'이너상의'},
+  '2MCATC':{z:'골드라벨(남)',i:'하의'},
+  '2MCATH':{z:'골드라벨(남)',i:'하의'},
+  '2MCATJ':{z:'골드라벨(남)',i:'하의'},
+  '2MCAYS':{z:'골드라벨(남)',i:'이너상의'},
+  '2MECMX':{z:'골드라벨(남)',i:'잡화기타'},
+  '2MGOJV':{z:'골드라벨(남)',i:'아우터'},
+  '2MGOKK':{z:'골드라벨(남)',i:'이너상의'},
+  '2MGOPK':{z:'골드라벨(남)',i:'이너상의'},
+  '2MGOTC':{z:'골드라벨(남)',i:'하의'},
+  '2MHTAP':{z:'골드라벨(남)',i:'이너상의'},
+  '2MSHSH':{z:'슈즈',i:'슈즈'},
+  '2MSHSL':{z:'슈즈',i:'슈즈'},
+  '2MSHSN':{z:'슈즈',i:'슈즈'},
+  '2MSPHH':{z:'골드라벨(남)',i:'이너상의'},
+  '2MSPJP':{z:'골드라벨(남)',i:'아우터'},
+  '2MSPKK':{z:'골드라벨(남)',i:'이너상의'},
+  '2MSPLL':{z:'골드라벨(남)',i:'이너상의'},
+  '2MSPMA':{z:'골드라벨(남)',i:'이너상의'},
+  '2MSUJV':{z:'골드라벨(남)',i:'아우터'},
+  '2WACAC':{z:'골드라벨(여)',i:'잡화기타'},
+  '2WACBE':{z:'골드라벨(여)',i:'잡화기타'},
+  '2WACHA':{z:'골드라벨(여)',i:'잡화기타'},
+  '2WBGBK':{z:'골드라벨(여)',i:'가방'},
+  '2WBGPC':{z:'골드라벨(여)',i:'가방'},
+  '2WBGTC':{z:'골드라벨(여)',i:'하의'},
+  '2WBGWA':{z:'골드라벨(여)',i:'가방'},
+  '2WCABL':{z:'골드라벨(여)',i:'이너상의'},
+  '2WCACC':{z:'골드라벨(여)',i:'이너상의'},
+  '2WCAHD':{z:'골드라벨(여)',i:'이너상의'},
+  '2WCAHH':{z:'골드라벨(여)',i:'이너상의'},
+  '2WCAJK':{z:'골드라벨(여)',i:'아우터'},
+  '2WCAJP':{z:'골드라벨(여)',i:'아우터'},
+  '2WCAKK':{z:'골드라벨(여)',i:'이너상의'},
+  '2WCALL':{z:'골드라벨(여)',i:'이너상의'},
+  '2WCAMA':{z:'골드라벨(여)',i:'이너상의'},
+  '2WCAMM':{z:'골드라벨(여)',i:'이너상의'},
+  '2WCAOW':{z:'골드라벨(여)',i:'원피스'},
+  '2WCAPK':{z:'골드라벨(여)',i:'이너상의'},
+  '2WCATC':{z:'골드라벨(여)',i:'하의'},
+  '2WCATH':{z:'골드라벨(여)',i:'하의'},
+  '2WCATJ':{z:'골드라벨(여)',i:'하의'},
+  '2WCAYS':{z:'골드라벨(여)',i:'이너상의'},
+  '2WGOHH':{z:'골드라벨(여)',i:'이너상의'},
+  '2WGOJK':{z:'골드라벨(여)',i:'아우터'},
+  '2WGOPK':{z:'골드라벨(여)',i:'이너상의'},
+  '2WGOTC':{z:'골드라벨(여)',i:'하의'},
+  '2WHTAP':{z:'골드라벨(여)',i:'이너상의'},
+  '2WSHSH':{z:'슈즈',i:'슈즈'},
+  '2WSHSL':{z:'슈즈',i:'슈즈'},
+  '2WSHSN':{z:'슈즈',i:'슈즈'},
+  '2WSPHH':{z:'골드라벨(여)',i:'이너상의'},
+  '2WSPLL':{z:'골드라벨(여)',i:'이너상의'},
+  '2WSPSK':{z:'골드라벨(여)',i:'하의'},
+  '2WSUBL':{z:'골드라벨(여)',i:'이너상의'},
+  '2WSUCC':{z:'골드라벨(여)',i:'이너상의'},
+  '2WSUJK':{z:'골드라벨(여)',i:'아우터'},
+  '2WSUJT':{z:'골드라벨(여)',i:'아우터'},
+  '2WSUKK':{z:'골드라벨(여)',i:'이너상의'},
+  '2WSUOW':{z:'골드라벨(여)',i:'원피스'},
+  '2WSUSK':{z:'골드라벨(여)',i:'하의'},
+  '2WSUTC':{z:'골드라벨(여)',i:'하의'},
+  '2WSUTH':{z:'골드라벨(여)',i:'하의'},
+  '2WSUTM':{z:'골드라벨(여)',i:'하의'},
+  '2WUWSO':{z:'골드라벨(여)',i:'잡화기타'},
+  'BKBKA1':{z:'여성',i:'가방'},
+  'BKCBA1':{z:'골드라벨(여)',i:'가방'},
+  'CCKKA1':{z:'남성',i:'이너상의'},
+  'CEACA1':{z:'여성',i:'(미분류)'},
+  'CEAHA1':{z:'골드라벨(남)',i:'잡화기타'},
+  'CESLA1':{z:'여성',i:'잡화기타'},
+  'CLIXA1':{z:'잡화',i:'리빙'},
+  'CSYSA1':{z:'남성',i:'이너상의'},
+  'JJJJA1':{z:'여성',i:'아우터'},
+  'OWOKA1':{z:'여성',i:'원피스'},
+  'OWOWA1':{z:'여성',i:'원피스'},
+  'PKHDA1':{z:'남성',i:'이너상의'},
+  'PKHHA1':{z:'남성',i:'이너상의'},
+  'PKMAA1':{z:'남성',i:'이너상의'},
+  'PKPKA1':{z:'남성',i:'이너상의'},
+  'SHSHA1':{z:'남성',i:'(미분류)'},
+  'TCTCA1':{z:'여성',i:'하의'},
+  'TCTHA1':{z:'남성',i:'하의'},
+  'TCTMA1':{z:'남성',i:'하의'},
+  'VVJVA1':{z:'여성',i:'아우터'}
+};  // v7: 224개 MC 매핑 (NC PICKS 마스터)
+
+// 매장 (mode: 'weekly'=주2회, 'daily'=데일리)
+let STORES = {
+  '7215':{name:'천호2점',cats:CAT_LABELS,mode:'weekly'},
+  '8227':{name:'강서점',cats:CAT_LABELS,mode:'daily'},   // ★ 모델점 = 데일리
+  '8224':{name:'송파점',cats:CAT_LABELS,mode:'weekly'},
+  '8206':{name:'강남점',cats:CAT_LABELS,mode:'weekly'},
+  '7209':{name:'분당점',cats:CAT_LABELS,mode:'weekly'},
+  '7217':{name:'불광점',cats:CAT_LABELS,mode:'weekly'},
+  '8237':{name:'수원터미널점',cats:CAT_LABELS,mode:'weekly'},
+  '8208':{name:'동수원점',cats:CAT_LABELS,mode:'weekly'},
+  '8212':{name:'순천점',cats:CAT_LABELS,mode:'weekly'},
+};
+
+const files = {inv:null, inv2:null, inv3:null, sales:null, avail:null, avail2:null, quota:null};
+let resultData = null;
+let weatherCtx = null;
+
+// 진열량 (강서점은 역기획 보고 기준 7조닝, 다른 매장은 기본값)
+let displayQty = {
+  // 강서점 v7 7조닝 (역기획 기준)
+  '강서점__여성':95000,
+  '강서점__남성':95000,
+  '강서점__골드라벨(여)':18300,
+  '강서점__골드라벨(남)':13300,
+  '강서점__잡화':10000,
+  '강서점__슈즈':10100,
+  '강서점__아동':5500,
+};
+let customStores = [];
+
+// v7 앱 설정 (분배 모드 + 토글)
+let appSettings = {
+  distMode: 'all',              // 'all' (강서=데일리 / 23지점=주2회 자동 적용)
+  selectedStores: [],            // 분배 대상 매장 plant 코드 배열
+  includeChildren: true,         // 아동 포함 (기본 ON)
+  includeZara: false,            // 자라/마시모두띠 포함 (기본 OFF)
+};
+
+// 2026 공휴일 (블랙아웃 데이)
+const HOLIDAYS_2026 = [
+  {date:'2026-01-01',name:'신정'},{date:'2026-02-16',name:'설날'},{date:'2026-02-17',name:'설날'},{date:'2026-02-18',name:'설날'},
+  {date:'2026-03-01',name:'삼일절'},{date:'2026-05-05',name:'어린이날'},{date:'2026-05-25',name:'석가탄신일'},
+  {date:'2026-06-06',name:'현충일'},{date:'2026-08-15',name:'광복절'},
+  {date:'2026-09-24',name:'추석'},{date:'2026-09-25',name:'추석'},{date:'2026-09-26',name:'추석'},
+  {date:'2026-10-03',name:'개천절'},{date:'2026-10-09',name:'한글날'},{date:'2026-12-25',name:'성탄절'}
+];
+let customHolidays = [];
+
+// v7: 공휴일 헬퍼 함수
+function getAllHolidays() {
+  return [...HOLIDAYS_2026, ...customHolidays];
+}
+function isHoliday(dateStr) {
+  return getAllHolidays().some(h => h.date === dateStr);
+}
+function holidayName(dateStr) {
+  const h = getAllHolidays().find(h => h.date === dateStr);
+  return h ? h.name : '';
+}
+function addCustomHoliday() {
+  const date = document.getElementById('custom-holiday-date').value;
+  const name = document.getElementById('custom-holiday-name').value.trim() || '임시공휴일';
+  if (!date) { alert('날짜를 선택하세요'); return; }
+  if (isHoliday(date)) { alert('이미 등록된 날짜입니다'); return; }
+  customHolidays.push({date, name});
+  customHolidays.sort((a,b) => a.date < b.date ? -1 : 1);
+  saveSettings();
+  renderHolidaysUI();
+  document.getElementById('custom-holiday-date').value = '';
+  document.getElementById('custom-holiday-name').value = '';
+}
+function removeCustomHoliday(date) {
+  customHolidays = customHolidays.filter(h => h.date !== date);
+  saveSettings();
+  renderHolidaysUI();
+}
+function renderHolidaysUI() {
+  const def = document.getElementById('default-holidays-list');
+  if (def) {
+    def.innerHTML = HOLIDAYS_2026.map(h => 
+      `<span style="display:inline-block;padding:3px 8px;background:#fff;border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text2)">${h.date.slice(5)} ${h.name}</span>`
+    ).join('');
+  }
+  const cus = document.getElementById('custom-holidays-list');
+  if (cus) {
+    if (customHolidays.length === 0) {
+      cus.innerHTML = '<span style="font-size:12px;color:var(--text3);font-style:italic">추가된 공휴일이 없습니다</span>';
+    } else {
+      cus.innerHTML = customHolidays.map(h =>
+        `<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;font-size:12px;font-weight:600;color:#92400e">
+          ${h.date.slice(5)} ${h.name}
+          <button onclick="removeCustomHoliday('${h.date}')" style="background:none;border:none;cursor:pointer;color:#92400e;font-weight:700;padding:0 2px" title="삭제">✕</button>
+        </span>`
+      ).join('');
+    }
+  }
+  // v7: 마지막 분배일 표시 (현재 모드 기반)
+  const ld = document.getElementById('last-dist-date');
+  if (ld) {
+    const isDaily = appSettings.distMode === 'daily';
+    const storageKey = isDaily ? 'opr_v7_lastDistDate_daily' : 'opr_v7_lastDistDate_weekly';
+    const last = localStorage.getItem(storageKey);
+    const modeLabel = isDaily ? '데일리' : '주2회';
+    if (last) {
+      const dt = new Date(last + 'T00:00:00');
+      const dows = ['일','월','화','수','목','금','토'];
+      ld.innerHTML = `${last} <span style="font-size:11px;color:var(--text3);font-weight:500">(${dows[dt.getDay()]}요일, ${modeLabel} 모드)</span>`;
+    } else {
+      ld.innerHTML = `<span style="color:var(--text3);font-style:italic;font-weight:500">기록 없음 (${modeLabel} 첫 실행 시 매출 파일 전체 사용)</span>`;
+    }
+  }
+}
+
+// v7: 마지막 분배일 초기화 (현재 모드 기반)
+function resetLastDistDate() {
+  const isDaily = appSettings.distMode === 'daily';
+  const modeLabel = isDaily ? '데일리' : '주2회';
+  if (!confirm(`${modeLabel} 모드의 마지막 분배일 기록을 초기화하시겠습니까?\n\n다음 ${modeLabel} 분배 실행 시 매출 파일의 전체 기간이 사용됩니다.`)) return;
+  const storageKey = isDaily ? 'opr_v7_lastDistDate_daily' : 'opr_v7_lastDistDate_weekly';
+  localStorage.removeItem(storageKey);
+  renderHolidaysUI();
+  alert('초기화되었습니다');
+}
+
+// 설정 영속화
+function saveSettings() {
+  try {
+    localStorage.setItem('opr_v7_settings', JSON.stringify(appSettings));
+    localStorage.setItem('opr_v7_displayqty', JSON.stringify(displayQty));
+    localStorage.setItem('opr_v7_holidays', JSON.stringify(customHolidays));
+    localStorage.setItem('opr_v7_stores', JSON.stringify(STORES));
+  } catch(e){}
+}
+function loadSettings() {
+  try {
+    const s = localStorage.getItem('opr_v7_settings');
+    if (s) Object.assign(appSettings, JSON.parse(s));
+    const dq = localStorage.getItem('opr_v7_displayqty');
+    if (dq) Object.assign(displayQty, JSON.parse(dq));
+    const h = localStorage.getItem('opr_v7_holidays');
+    if (h) customHolidays = JSON.parse(h);
+    const st = localStorage.getItem('opr_v7_stores');
+    if (st) {
+      const saved = JSON.parse(st);
+      for (const k of Object.keys(saved)) {
+        if (STORES[k]) Object.assign(STORES[k], saved[k]);
+      }
+    }
+  } catch(e){}
+}
+loadSettings();
+
+// ── v7 헬퍼: 조닝/품종 결정 ──
+function resolveZone(mc, mch2) {
+  const mcKey = String(mc||'').trim().toUpperCase();
+  // MC 매핑이 있으면 우선
+  if (mcKey && MC_ZONE_MAP[mcKey]) return MC_ZONE_MAP[mcKey].z;
+  // MCH2 fallback
+  const m2 = String(mch2||'').trim().toUpperCase();
+  if (m2 && MCH2_CAT[m2]) return MCH2_CAT[m2];
+  // MC 앞 2자로 fallback
+  if (mcKey.length >= 2) {
+    const m2b = mcKey.substring(0, 2);
+    if (MCH2_CAT[m2b]) return MCH2_CAT[m2b];
+  }
+  return '기타';
+}
+
+function resolveItem(mc) {
+  const mcKey = String(mc||'').trim().toUpperCase();
+  if (mcKey && MC_ZONE_MAP[mcKey]) return MC_ZONE_MAP[mcKey].i;
+  // MC 3-4번째 글자 패턴 매칭
+  if (mcKey.length >= 4) {
+    const code = mcKey.substring(2, 4);
+    // 카디건/자켓/코트
+    if (['CA','JO','JK','JP','OW','OU','JT','JD','JV','TJ','TH','PE'].includes(code)) return '아우터';
+    // 상의
+    if (['SU','SP','HT','IW','TS','BL','HH','SO','HA','TC','TO','TT','HD','RN','YS','LL','MM','TM'].includes(code)) return '이너상의';
+    // 하의
+    if (['PA','PT','SK','JE','TR','SD','LE'].includes(code)) return '하의';
+    // 원피스
+    if (['OP','DR','VV','GO'].includes(code)) return '원피스';
+    // 가방
+    if (['BG','BA','BB','GG'].includes(code)) return '가방';
+    // 슈즈
+    if (['SH','SN','SL','BO','SS'].includes(code)) return '슈즈';
+    // 키즈
+    if (['KD','TD'].includes(code)) return '이너상의';
+    // 액세서리
+    if (['AC','HM','LV','CL','MA','GL','KK','MU','II','CC','HJ','HB','HL','PK','UN'].includes(code)) return '잡화기타';
+  }
+  // MCH2가 잡화류면 잡화기타
+  if (mcKey.length >= 2) {
+    const m2 = mcKey.substring(0, 2);
+    if (['1L','1C'].includes(m2)) return '잡화기타';
+  }
+  return '기타';
+}
+
+function isZaraBrand(itemName, brandName) {
+  const txt = String(itemName||'') + ' ' + String(brandName||'');
+  return /자라|ZARA|마시모두띠|MASSIMO/i.test(txt);
+}
+
+function shouldExcludeItem(zone, itemName, brandName) {
+  if (!appSettings.includeChildren && zone === '아동') return true;
+  if (!appSettings.includeZara && isZaraBrand(itemName, brandName)) return true;
+  return false;
+}
+
+function extractPlant(storeStr) {
+  const m = String(storeStr||'').match(/\b(\d{4})\b/);
+  return m ? m[1] : '';
+}
+
+// ── 패널 전환 ──────────────────────────────────────────────────────────
+function showPanel(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item, .mobile-tab-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  const sideNav = document.getElementById('nav-' + id);
+  if (sideNav) sideNav.classList.add('active');
+  if (id === 'stores') renderStoreList();
+  if (id === 'display') renderDisplayTable();
+  if (id === 'result' && resultData) renderResult();
+  if (id === 'settings') { renderHolidaysUI(); renderToggleUI(); }
+}
+
+// ── 파일 핸들 ──────────────────────────────────────────────────────────
+function handleFile(input, key) {
+  const file = input.files[0]; if (!file) return;
+  
+  // ⚡ v7: 파일 슬롯 디버그 로그 (어떤 슬롯에 어떤 파일이 들어가는지 추적)
+  console.log(`[파일업로드] ${key} 슬롯 → ${file.name} (${(file.size/1024).toFixed(1)}KB)`);
+
+  // 가용재고이고 이미 파일이 있으면 추가/교체 선택
+  if (key === 'avail' && files.avail) {
+    showAvailChoiceModal(file);
+    input.value = '';
+    return;
+  }
+
+  // 일재고도 다중 업로드 (자재코드→계절월 매핑 보강용)
+  if (key === 'inv' && files.inv) {
+    if (!files.inv2) {
+      files.inv2 = file;
+      const fn2 = document.getElementById('fn-inv2');
+      fn2.textContent = '+ ' + file.name + ' (계절월 매핑 보강)';
+      fn2.style.display = 'block';
+    } else if (!files.inv3) {
+      files.inv3 = file;
+      const fn3 = document.getElementById('fn-inv3');
+      fn3.textContent = '+ ' + file.name + ' (계절월 매핑 보강)';
+      fn3.style.display = 'block';
+    } else {
+      alert('일재고분석은 최대 3개까지 업로드 가능합니다');
+    }
+    input.value = '';
+    return;
+  }
+
+  files[key] = file;
+  document.getElementById('fn-' + key).textContent = file.name;
+  const card = document.getElementById('card-' + key);
+  card.classList.add('loaded');
+  document.getElementById('fs-' + key).textContent = '✓ 준비 완료';
+  checkReady();
+  
+  // ⚡ 업로드 직후 시트명 즉시 검증 (사용자가 잘못 올렸는지 즉시 알림)
+  setTimeout(() => {
+    readXLSX(file).then(wb => {
+      const sheets = wb.SheetNames || [];
+      console.log(`[파일확인] ${key} 슬롯의 실제 시트: [${sheets.join(', ')}]`);
+      
+      // 슬롯과 파일 종류가 맞는지 확인 (경고만, 차단 안함)
+      const expectedSheet = {inv: '일재고분석', sales: '매출상세분석', avail: 'Sheet1'}[key];
+      const hasExpected = sheets.some(s => s.includes(expectedSheet) || s === expectedSheet);
+      const hasGanyong = sheets.length === 1 && sheets[0] === 'Sheet1';
+      const hasOther = sheets.some(s => s.includes('재고') || s.includes('매출')) && key !== 'avail';
+      
+      if (key === 'avail' && !hasGanyong) {
+        console.warn(`⚠ 가용재고 슬롯에 다른 파일이 들어있을 수 있어요 (시트: ${sheets.join(', ')})`);
+      }
+      if (key === 'inv' && !sheets.some(s => s.includes('일재고'))) {
+        console.warn(`⚠ 일재고분석 슬롯의 시트명이 예상과 달라요: [${sheets.join(', ')}]`);
+      }
+      if (key === 'sales' && !sheets.some(s => s.includes('매출'))) {
+        console.warn(`⚠ 매출상세분석 슬롯의 시트명이 예상과 달라요: [${sheets.join(', ')}]`);
+      }
+    }).catch(e => console.warn('파일 검증 실패:', e));
+  }, 100);
+
+  // 일재고분석 업로드 즉시 파싱 → 매장 상세 바로 확인 가능
+  if (key === 'inv') {
+    readXLSX(file).then(wb => {
+      window._invData = parseInventory(wb);
+      const count = Object.keys(window._invData).length;
+      if (count === 0) console.warn('[일재고분석] 파싱 결과 0개 — 시트명/컬럼 확인 필요');
+      else console.log(`[일재고분석] ${count}개 스타일 파싱 완료`);
+    }).catch(e => console.error('[일재고분석] 파싱 오류:', e));
+  }
+  // 매출상세분석 업로드 즉시 파싱 → 적정재고 계산용
+  if (key === 'sales') {
+    readXLSX(file).then(wb => {
+      window._salesData = parseSales(wb);
+      window._salesWb = wb;
+      const count = Object.keys(window._salesData.sales||{}).length;
+      if (count === 0) console.warn('[매출상세분석] 파싱 결과 0개 — 시트명/컬럼 확인 필요');
+      else console.log(`[매출상세분석] ${count}개 스타일 파싱 완료`);
+      // 옵션 3: 매출 파일에서 일자 추출해서 체크박스 생성
+      buildOpt3DateCheckboxes(wb);
+    }).catch(e => console.error('[매출상세분석] 파싱 오류:', e));
+  }
+}
+
+// 옵션 3: 매출 파일의 일자 + 향후 7일 체크박스 생성
+function buildOpt3DateCheckboxes(wb) {
+  const container = document.getElementById('cfg-opt3-dates');
+  if (!container) return;
+  
+  // 매출 파일에서 일자 범위 추출
+  let salesDates = [];
+  try {
+    const sn = wb.SheetNames.find(n => n.includes('매출')) || wb.SheetNames[wb.SheetNames.length-1];
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:null, raw:false});
+    let hdr = -1;
+    for (let i=0; i<10; i++) {
+      if (rows[i] && rows[i].some(v => String(v||'').includes('MCH2'))) { hdr = i; break; }
+    }
+    const h = rows[hdr] || [];
+    const iDate = h.findIndex(v => String(v||'').trim() === '일');
+    if (iDate >= 0) {
+      const ds = new Set();
+      for (let i=hdr+1; i<rows.length; i++) {
+        const r = rows[i]; if (!r) continue;
+        const d = String(r[iDate]||'').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) ds.add(d);
+      }
+      salesDates = [...ds].sort();
+    }
+  } catch(e) { console.warn('[opt3] 일자 추출 실패', e); }
+  
+  // 매출 파일 마지막 일자 다음날부터 향후 7일 추가
+  const dates = [];
+  if (salesDates.length > 0) {
+    const lastDate = new Date(salesDates[salesDates.length-1] + 'T00:00:00');
+    for (let i=1; i<=8; i++) {
+      const d = new Date(lastDate); d.setDate(d.getDate() + i);
+      dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    }
+  } else {
+    // fallback: 오늘 + 7일
+    const t = new Date();
+    for (let i=0; i<8; i++) {
+      const d = new Date(t); d.setDate(d.getDate() + i);
+      dates.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    }
+  }
+  
+  const dowName = ['일','월','화','수','목','금','토'];
+  let html = '';
+  for (const d of dates) {
+    const dow = new Date(d + 'T00:00:00').getDay();
+    const md = d.substring(5);
+    html += `<label style="font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;padding:3px 6px;background:var(--bg2);border-radius:4px"><input type="checkbox" class="opt3-date-cb" value="${d}" style="margin:0">${md}(${dowName[dow]})</label>`;
+  }
+  container.innerHTML = html || '<span style="font-size:11px;color:var(--text3)">매출 파일에 일자 컬럼 없음</span>';
+}
+
+// 옵션 3: 베이스라인(요일별 가중평균) + 보정 적용 → mcStorePlant 생성
+function applyOpt3Forecast(wb, opt3Cfg) {
+  // 매출 파일 파싱 (전체 기간)
+  const sn = wb.SheetNames.find(n => n.includes('매출')) || wb.SheetNames[wb.SheetNames.length-1];
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:null, raw:false});
+  
+  // 공통 헤더 매핑 (이름 기반)
+  const {hdr, cols} = findHeaderColumns(rows, {
+    iStore: ['지점(Now)', '지점'],
+    iMC:    ['MC(자재그룹)(Now)', 'MC(자재그룹)', 'MC'],
+    iDate:  ['일'],
+    iQty:   ['판매수량'],
+  });
+  if (hdr < 0) return {error: '매출 파일 헤더 행을 찾을 수 없음', mcStorePlant:{}};
+  
+  const iStore = cols.iStore;
+  const iMC = cols.iMC;
+  const iDate = cols.iDate;
+  const iQty = cols.iQty;
+  
+  if (iDate < 0 || iQty < 0) {
+    return {error: `매출 파일에 일자(${iDate}) 또는 판매수량(${iQty}) 컬럼 없음`, mcStorePlant:{}};
+  }
+  
+  // (1) 매장×MC×요일×일자 매출 집계
+  function extractPlant(s) {
+    s = String(s||''); 
+    const m = s.match(/\/(\d{4})$/) || s.match(/\b(\d{4})\b/);
+    return m ? m[1] : null;
+  }
+  const allDates = new Set();
+  // dailySales[plant][mc][date] = qty
+  const dailySales = {};
+  for (let i=hdr+1; i<rows.length; i++) {
+    const r = rows[i]; if (!r) continue;
+    const d = String(r[iDate]||'').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+    const plant = extractPlant(String(r[iStore]||''));
+    if (!plant) continue;
+    const mc = String(r[iMC]||'').trim(); if (!mc) continue;
+    const qty = parseFloat(String(r[iQty]||'').replace(/[, ]/g,'')) || 0;
+    if (qty <= 0) continue;
+    allDates.add(d);
+    if (!dailySales[plant]) dailySales[plant] = {};
+    if (!dailySales[plant][mc]) dailySales[plant][mc] = {};
+    dailySales[plant][mc][d] = (dailySales[plant][mc][d]||0) + qty;
+  }
+  const sortedDates = [...allDates].sort();
+  if (sortedDates.length === 0) return {error: '매출 일자 데이터 없음', mcStorePlant:{}};
+  
+  // (2) 최근 7일 (가중치 부여 대상)
+  const lastDate = sortedDates[sortedDates.length-1];
+  const lastDateMs = new Date(lastDate+'T00:00:00').getTime();
+  const recent7 = new Set();
+  for (let i=0; i<7; i++) {
+    const d = new Date(lastDateMs - i*86400000);
+    recent7.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  
+  // (3) 매장×MC×요일별 가중평균 계산
+  // weighted_avg[plant][mc][dow] = (sum_recent×W + sum_old×1) / (count_recent×W + count_old×1)
+  const weight = opt3Cfg.recentWeight || 2.0;
+  function dowOf(d) { return new Date(d+'T00:00:00').getDay(); }
+  
+  // (4) 분배 대상 일자 → 일자별 보정 → 합산
+  const targetDates = opt3Cfg.targetDates || [];   // ['2026-04-28', ...]
+  const trendMul = 1 + (opt3Cfg.trendPct||0)/100;
+  const childMul = 1 + (opt3Cfg.childPct||0)/100;
+  const childDates = new Set(opt3Cfg.childDates || []);
+  const holidayMap = opt3Cfg.holidayMap || {};   // {date: pct}
+  const mc1Map = opt3Cfg.mc1Map || {};           // {mc1: pct}
+  
+  const mcStorePlant = {};
+  
+  for (const plant of Object.keys(dailySales)) {
+    for (const mc of Object.keys(dailySales[plant])) {
+      const series = dailySales[plant][mc];   // {date: qty}
+      
+      // 요일별 가중평균
+      const dowAcc = {0:{w:0,c:0}, 1:{w:0,c:0}, 2:{w:0,c:0}, 3:{w:0,c:0}, 4:{w:0,c:0}, 5:{w:0,c:0}, 6:{w:0,c:0}};
+      for (const [d, q] of Object.entries(series)) {
+        const dw = dowOf(d);
+        const wt = recent7.has(d) ? weight : 1.0;
+        dowAcc[dw].w += q * wt;
+        dowAcc[dw].c += wt;
+      }
+      const baseByDow = {};
+      for (const dw of Object.keys(dowAcc)) {
+        baseByDow[dw] = dowAcc[dw].c > 0 ? dowAcc[dw].w / dowAcc[dw].c : 0;
+      }
+      
+      // 분배일들에 대해 보정 적용 후 합산
+      let total = 0;
+      const mc1 = MC_TO_MC1[mc] || '';
+      const mc1Pct = mc1Map[mc1] || 0;
+      const mch2 = mc.length >= 2 ? mc.substring(0,2) : '';
+      const isChild = (mch2 === '1K' || mch2 === '2K' || mch2 === '3K');
+      
+      for (const td of targetDates) {
+        const baseline = baseByDow[dowOf(td)] || 0;
+        if (baseline <= 0) continue;
+        const holidayPct = holidayMap[td] || 0;
+        const childAdd = (isChild && childDates.has(td)) ? childMul : 1.0;
+        const v = baseline * trendMul * (1 + mc1Pct/100) * (1 + holidayPct/100) * childAdd;
+        total += v;
+      }
+      
+      if (total > 0) {
+        if (!mcStorePlant[plant]) mcStorePlant[plant] = {};
+        mcStorePlant[plant][mc] = total;
+      }
+    }
+  }
+  
+  return {mcStorePlant, totalDays: sortedDates.length, dateRange:[sortedDates[0], lastDate]};
+}
+
+function showAvailChoiceModal(newFile) {
+  const modal = document.getElementById('avail-choice-modal');
+  document.getElementById('avail-choice-filename').textContent = newFile.name;
+  modal.style.display = 'flex';
+  modal._pendingFile = newFile;
+}
+
+function applyAvailChoice(mode) {
+  const modal = document.getElementById('avail-choice-modal');
+  const newFile = modal._pendingFile;
+  modal.style.display = 'none';
+
+  if (mode === 'replace') {
+    // 교체: 기존 파일 대체, 두 번째 파일 초기화
+    files.avail = newFile;
+    files.avail2 = null;
+    document.getElementById('fn-avail').textContent = newFile.name;
+    document.getElementById('fs-avail').textContent = '✓ 준비 완료';
+    const fn2 = document.getElementById('fn-avail2');
+    fn2.style.display = 'none'; fn2.textContent = '';
+  } else {
+    // 추가: 두 번째 파일로 합산
+    files.avail2 = newFile;
+    const fn2 = document.getElementById('fn-avail2');
+    fn2.textContent = '+ ' + newFile.name + ' (합산)';
+    fn2.style.display = 'block';
+    document.getElementById('fs-avail').textContent = '✓ 2개 파일 합산 준비';
+  }
+  checkReady();
+}
+function checkReady() {
+  const ready = files.inv && files.sales && files.avail;
+  document.getElementById('run-btn').disabled = !ready;
+  let hint = '';
+  if (!files.inv) hint = '① 일재고분석 파일을 업로드하세요';
+  else if (!files.sales) hint = '② 매출상세분석 파일을 업로드하세요';
+  else if (!files.avail) hint = '③ 가용재고 파일을 업로드하세요';
+  else hint = '✓ 분배 실행 준비 완료';
+  document.getElementById('ready-hint').textContent = hint;
+}
+
+// ── XLSX 읽기 ──────────────────────────────────────────────────────────
+function readXLSX(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(XLSX.read(e.target.result, {type:'array', cellDates:true}));
+    r.onerror = rej;
+    r.readAsArrayBuffer(file);
+  });
+}
+function sheetToRows(ws) {
+  return XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
+}
+
+// ── 공통: 헤더 자동 탐색 (이름 기반, 위치 의존 없음) ──
+// rows에서 헤더 행 찾고, 각 키워드로 컬럼 인덱스 매핑 반환
+// keywords = {key: [후보키워드1, 후보키워드2, ...]}
+// upperRows: 헤더 위 N행도 함께 검색 (BW 매출 파일은 '판매수량'이 위 행에 있음)
+function findHeaderColumns(rows, keywords, opts = {}) {
+  const upperRows = opts.upperRows || 2;  // 위 2행까지 검색
+  const searchPattern = opts.searchPattern || 'MCH2';  // 헤더 행 인식용
+  
+  // 헤더 행 찾기
+  let hdr = -1;
+  for (let i=0; i<Math.min(15, rows.length); i++) {
+    if (rows[i] && rows[i].some(v => String(v||'').normalize('NFC').includes(searchPattern))) {
+      hdr = i; break;
+    }
+  }
+  if (hdr < 0) return {hdr: -1, cols: {}};
+  
+  // 헤더 행 + 위 N행 모두 검색 영역
+  const searchRows = [];
+  for (let r = Math.max(0, hdr - upperRows); r <= hdr; r++) {
+    if (rows[r]) searchRows.push(rows[r]);
+  }
+  
+  const cols = {};
+  for (const [key, candidates] of Object.entries(keywords)) {
+    let found = -1;
+    for (const cand of candidates) {
+      const candNorm = cand.normalize('NFC');
+      // 헤더 행 우선
+      for (const row of searchRows) {
+        for (let j=0; j<row.length; j++) {
+          const v = String(row[j]||'').normalize('NFC').trim();
+          // 정확 매칭 우선
+          if (v === candNorm) { found = j; break; }
+        }
+        if (found >= 0) break;
+      }
+      if (found < 0) {
+        // 부분 매칭 fallback
+        for (const row of searchRows) {
+          for (let j=0; j<row.length; j++) {
+            const v = String(row[j]||'').normalize('NFC').trim();
+            if (v.includes(candNorm)) { found = j; break; }
+          }
+          if (found >= 0) break;
+        }
+      }
+      if (found >= 0) break;
+    }
+    cols[key] = found;
+  }
+  return {hdr, cols};
+}
+
+// ── 날씨 API ──────────────────────────────────────────────────────────
+async function fetchWeather() {
+  const URL = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m&daily=temperature_2m_max,temperature_2m_min&past_days=2&forecast_days=3&timezone=Asia%2FSeoul';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(URL);
+      if (!r.ok) { console.warn('[날씨] HTTP 오류:', r.status); continue; }
+      const d = await r.json();
+      if (!d.current || d.current.temperature_2m == null) { console.warn('[날씨] 응답 구조 이상:', d); continue; }
+      const cur = d.current.temperature_2m;
+      const mx = d.daily.temperature_2m_max, mn = d.daily.temperature_2m_min;
+      if (!mx || mx.length < 5) { console.warn('[날씨] daily 배열 부족:', mx); continue; }
+      const todayAvg = (mx[2]+mn[2])/2, yestAvg = (mx[1]+mn[1])/2;
+      const trend = todayAvg - yestAvg;
+      const foreAvg = ((mx[3]+mn[3])/2+(mx[4]+mn[4])/2)/2;
+      return {cur, trend, foreAvg};
+    } catch(e) {
+      console.error('[날씨] API 호출 실패 (시도 '+(attempt+1)+'):', e.message);
+      if (attempt === 0) await new Promise(r => setTimeout(r, 2000)); // 2초 후 재시도
+    }
+  }
+  return null;
+}
+function weatherMult(st, w) {
+  if (!w) return 1.0;
+  const s = w.cur*0.5 + w.trend*2 + (w.foreAvg-w.cur)*0.3;
+  if (st==='SS') { if(s>8)return 1.4; if(s>3)return 1.2; if(s>-3)return 1.0; if(s>-8)return 0.8; return 0.6; }
+  if (st==='FW') { if(s<-8)return 1.4; if(s<-3)return 1.2; if(s<3)return 1.0; if(s<8)return 0.8; return 0.6; }
+  return 1.0;
+}
+function seasonMonthPriority(smCode) {
+  // v7+: 계절월 정책
+  // 숫자(P 차수): 4월 분배 시 4P 메인 / 5P 선행 / 3P 보충 / 나머지 제외
+  // 알파벳: B(봄)/S(여름)/A(연중) 분배 가능 (1.0배) / W(겨울)/F(가을) 제외
+  // BW는 "0001"~"0009" 형태 또는 "1"~"9" → 앞의 0 제거
+  let key = String(smCode||'').trim().toUpperCase();
+  if (/^0+\d+$/.test(key)) key = String(parseInt(key));
+  
+  // 빈값/특수문자 제외
+  if (!key || key === '#') return {mult: 0, label: '제외(빈값)', isInvalid: true};
+  
+  // 숫자 P 차수
+  const num = parseInt(key);
+  if (!isNaN(num) && String(num) === key && num >= 1 && num <= 9) {
+    const cur = new Date().getMonth() + 1;
+    const diff = num - cur;
+    if (diff === 0) return {mult: 1.5, label: num + 'P(메인-이번달)'};
+    if (diff === 1) return {mult: 1.2, label: num + 'P(다음달-선행)'};
+    if (diff === -1) return {mult: 1.0, label: num + 'P(지난달-보충)'};
+    return {mult: 0, label: num + 'P(제외-차이큼)', isInvalid: true};
+  }
+  
+  // 알파벳 (계절 코드)
+  if (key === 'B') return {mult: 1.0, label: '봄(B)'};
+  if (key === 'S') return {mult: 1.0, label: '여름(S)'};
+  if (key === 'A') return {mult: 1.0, label: '연중(A)'};
+  if (key === 'W') return {mult: 0, label: '겨울(W)-제외', isInvalid: true};
+  if (key === 'F') return {mult: 0, label: '가을(F)-제외', isInvalid: true};
+  if (key === 'N') return {mult: 0, label: 'N-제외', isInvalid: true};
+  
+  return {mult: 0, label: '제외(' + key + ')', isInvalid: true};
+}
+function getSeasonType(c) {
+  if (c===null||c===undefined) return 'ALL';
+  if (c instanceof Date) return 'ALL';
+  c = String(c).replace(/,/g,'').trim(); // 천단위 구분자 제거
+  if (!c) return 'ALL';
+  if (c.includes('SS')) return 'SS';
+  if (c.includes('FW')) return 'FW';
+  // 숫자형 코드 (예: 20232, 20232.0) → parseInt로 정수 변환 후 끝자리 추출
+  const num = parseInt(c);
+  const last = isNaN(num) ? c.slice(-1) : String(num).slice(-1);
+  if (['1','2'].includes(last)) return 'SS';
+  if (['3','4','9'].includes(last)) return 'FW';
+  return 'ALL';
+}
+function getDowMult() {
+  const dow = new Date().getDay();
+  const idx = dow===0 ? 6 : dow-1;
+  return parseFloat(document.getElementById('dow-'+idx).value)||1.0;
+}
+function extractPlant(s) {
+  s = String(s||'');
+  // 1) /1234 끝 패턴 (R001/8227)
+  let m = s.match(/\/(\d{4})$/);
+  if (m) return m[1];
+  // 2) 4자리 숫자 어디든
+  m = s.match(/\b(\d{4})\b/);
+  if (m) return m[1];
+  return null;
+}
+
+
+// v7 시트 선택 헬퍼 — 가장 단순하고 안전
+// 원리: 한글 이름 정확 매칭 → 부분 일치 → hidden 제외하고 데이터 많은 시트
+function selectSheet(wb, exactName, partialName) {
+  // 1) 정확 매칭
+  if (exactName && wb.Sheets[exactName]) return wb.Sheets[exactName];
+  // 2) 부분 일치 (한글 일부만 깨진 경우 대비)
+  if (partialName) {
+    for (const sn of wb.SheetNames) {
+      if (sn.includes(partialName)) return wb.Sheets[sn];
+    }
+  }
+  // 3) hidden 제외하고 가장 큰 시트
+  let best = null, bestRows = 0;
+  for (const sn of wb.SheetNames) {
+    if (sn.toLowerCase().includes('hidden')) continue;
+    const ws = wb.Sheets[sn];
+    if (!ws || !ws['!ref']) continue;
+    const m = ws['!ref'].match(/[A-Z]+(\d+):[A-Z]+(\d+)/);
+    if (!m) continue;
+    const rc = parseInt(m[2]) - parseInt(m[1]);
+    if (rc > bestRows) { bestRows = rc; best = ws; }
+  }
+  if (best) return best;
+  // 4) 최후: 첫 시트
+  return wb.Sheets[wb.SheetNames[0]];
+}
+
+
+// ── 파싱: 일재고분석 ──────────────────────────────────────────────────
+function parseInventory(wb) {
+  const ws = selectSheet(wb, '일재고분석', '재고');
+  console.log('[parseInventory] 사용 시트 ref:', ws['!ref']);
+  const rows = sheetToRows(ws);
+  let hdr = -1;
+  for (let i=0;i<rows.length;i++) {
+    if (rows[i]&&rows[i].some(v=>String(v||'').includes('MCH2'))) {hdr=i; break;}
+  }
+  // 한글 매칭 실패 시 데이터 패턴으로 헤더 추론
+  if (hdr < 0) {
+    for (let i=0; i<Math.min(15, rows.length); i++) {
+      const r = rows[i]; if (!r) continue;
+      let hasMC = false, hasNum = false;
+      for (const v of r) {
+        if (typeof v === 'string' && /^[0-9][A-Z]{2}[A-Z0-9]{3}$/i.test(String(v).trim())) hasMC = true;
+        if (typeof v === 'number' && v > 0) hasNum = true;
+      }
+      if (hasMC && hasNum) { hdr = i - 1; break; }
+    }
+  }
+  if (hdr < 0) {
+    console.warn('[parseInventory] 헤더 행 못찾음 — 시트:', ws['!ref']);
+    return {};
+  }
+  const h = rows[hdr];
+  // Unicode NFC 정규화로 한국어 컬럼명 매칭
+  const ci = k => {
+    const kn = k.normalize('NFC');
+    let idx = h.findIndex(v => String(v||'').normalize('NFC').includes(kn));
+    return idx;
+  };
+  let iStore=ci('지점'); 
+  let iMch2=ci('MCH2'), iStyle=ci('스타일코드');
+  let iSeason = ci('계절연도'), iSmMonth = ci('계절월');
+  let iBrand = ci('오리지날브랜드'), iMC = ci('MC(자재그룹)');
+  // 폴백: MCH2 컬럼 위치 기준 상대 위치로 탐색
+  if (iMch2 >= 0) {
+    if (iSeason<0) iSeason = iMch2 + 6;
+    if (iSmMonth<0) iSmMonth = iMch2 + 7;
+    if (iBrand<0) iBrand = iMch2 + 4;
+    if (iMC<0) iMC = iMch2 + 2;
+  }
+  // ⚡ 한글 매칭 실패 시 BW 일재고분석 표준 컬럼 적용
+  if (iStore < 0) iStore = 0;
+  if (iMch2 < 0) iMch2 = 11;
+  if (iStyle < 0) iStyle = 13;
+  if (iMC < 0) iMC = 6;
+  if (iSeason < 0) iSeason = 8;
+  if (iSmMonth < 0) iSmMonth = 9;
+  if (iBrand < 0) iBrand = 4;
+  // 재고량은 MCH2 헤더 위 행에서 찾기 (헤더행에 없는 경우)
+  let iQty = ci('재고량');
+  if (iQty < 0) {
+    for (let ri=Math.max(0,hdr-3); ri<hdr; ri++) {
+      const rh=rows[ri]; if(!rh) continue;
+      for (let j=0;j<rh.length;j++) {
+        if (rh[j] && String(rh[j]).trim()==='재고량') { iQty=j; break; }
+      }
+      if (iQty>=0) break;
+    }
+  }
+  if (iQty < 0 && rows[hdr+1] && typeof rows[hdr+1][18] === 'number') {
+    iQty = 18; // BW 표준 위치
+  }
+  const iSize=ci('Size'), iColor=ci('컬러');
+
+  // 헤더 위 행에서 최초판매가, 현판가, 이동평균가 컬럼 찾기
+  let iInitPrice=-1, iCurrentPrice=-1, iAvgPrice=-1;
+  for (let ri=Math.max(0,hdr-3); ri<=hdr; ri++) {
+    const rh = rows[ri]; if (!rh) continue;
+    for (let j=0;j<rh.length;j++) {
+      const v = String(rh[j]||'');
+      if (v.includes('최초판매가')) iInitPrice = j;
+      if (v.includes('현판가')) iCurrentPrice = j;
+      if (v.includes('이동평균가')) iAvgPrice = j;
+    }
+  }
+  // 이동평균가가 헤더 행에 있는 경우도 확인
+  if (iAvgPrice < 0) iAvgPrice = ci('이동평균가');
+
+  const inv = {};
+  for (let i=hdr+1;i<rows.length;i++) {
+    const r=rows[i]; if(!r||!r[iStyle]) continue;
+    const style=String(r[iStyle]).trim();
+    const storeFull=String(r[iStore]||'').trim();
+    const qty=parseFloat(r[iQty])||0;
+    const mch2=String(r[iMch2]||'').trim();
+    const smCode=String(r[iSmMonth]||'').trim();
+    const seasonCode=String(r[iSeason]||'').trim();
+    const sizeVal=iSize>=0?String(r[iSize]||'').trim():'';
+    const colorVal=iColor>=0?String(r[iColor]||'').trim():'';
+
+    // 단가 계산: 재고액 ÷ 재고량
+    const avgPrice = iAvgPrice>=0 ? (parseFloat(r[iAvgPrice])||0) : 0;
+    const initPriceAmt = iInitPrice>=0 ? (parseFloat(r[iInitPrice])||0) : 0;
+    const curPriceAmt  = iCurrentPrice>=0 ? (parseFloat(r[iCurrentPrice])||0) : 0;
+    const initPrice = (qty>0 && initPriceAmt>0) ? initPriceAmt/qty : avgPrice;
+    const curPrice  = (qty>0 && curPriceAmt>0)  ? curPriceAmt/qty  : avgPrice;
+
+    const mcVal = iMC>=0 ? String(r[iMC]||'').trim() : '';
+    const brandVal = iBrand>=0 ? String(r[iBrand+1]||'').trim() : '';
+    if (!inv[style]) inv[style]={
+      name:String(r[iStyle+1]||'').trim(),
+      mch2, cat:MCH2_CAT[mch2]||mch2,
+      mc: mcVal,
+      brand: brandVal,
+      season:getSeasonType(seasonCode),
+      season_year:seasonCode,
+      season_month:smCode,
+      avg_price: avgPrice,
+      init_price: initPrice,
+      cur_price: curPrice,
+      size:sizeVal, color:colorVal,
+      total_qty:0, store_qty:{},
+      store_cat_qty:{}, store_brand_qty:{}, store_season_qty:{},
+    };
+    // 단가 누적 평균 업데이트
+    if (qty > 0) {
+      const prevQty = inv[style].total_qty;
+      const totalQty = prevQty + qty;
+      if (initPriceAmt > 0) inv[style].init_price = ((inv[style].init_price * prevQty) + initPrice * qty) / totalQty;
+      if (curPriceAmt > 0)  inv[style].cur_price  = ((inv[style].cur_price  * prevQty) + curPrice  * qty) / totalQty;
+    }
+    inv[style].total_qty += qty;
+    const plant = extractPlant(storeFull);
+    if (plant) {
+      inv[style].store_qty[plant]=(inv[style].store_qty[plant]||0)+qty;
+      // 매장별 카테고리/브랜드/시즌 집계
+      const qCat = MCH2_CAT[mch2]||mch2;
+      const qSeason = getSeasonType(String(r[iSeason]||'').trim());
+      const qBrand = iBrand>=0 ? String(r[iBrand]||'').trim() : '기타';
+      if (!inv[style].store_cat_qty[plant]) inv[style].store_cat_qty[plant]={};
+      inv[style].store_cat_qty[plant][qCat]=(inv[style].store_cat_qty[plant][qCat]||0)+qty;
+      if (!inv[style].store_brand_qty[plant]) inv[style].store_brand_qty[plant]={};
+      inv[style].store_brand_qty[plant][qBrand]=(inv[style].store_brand_qty[plant][qBrand]||0)+qty;
+      if (!inv[style].store_season_qty[plant]) inv[style].store_season_qty[plant]={};
+      inv[style].store_season_qty[plant][qSeason]=(inv[style].store_season_qty[plant][qSeason]||0)+qty;
+    }
+  }
+  return inv;
+}
+
+// ── 파싱: 매출상세분석 ────────────────────────────────────────────────
+function parseSales(wb) {
+  const ws = selectSheet(wb, '매출상세분석', '매출');
+  console.log('[parseSales] 사용 시트 ref:', ws['!ref']);
+  const rows = sheetToRows(ws);
+  let hdr=-1;
+  for (let i=0;i<rows.length;i++) {
+    if (rows[i]&&rows[i].some(v=>String(v||'').includes('MCH2'))) {hdr=i; break;}
+  }
+  // 한글 매칭 실패 시 데이터 패턴 fallback
+  if (hdr < 0) {
+    for (let i=0; i<Math.min(15, rows.length); i++) {
+      const r = rows[i]; if (!r) continue;
+      let hasMC = false, hasDate = false;
+      for (const v of r) {
+        if (typeof v === 'string') {
+          if (/^[0-9][A-Z]{2}[A-Z0-9]{3}$/i.test(String(v).trim())) hasMC = true;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(String(v).trim())) hasDate = true;
+        }
+      }
+      if (hasMC && hasDate) { hdr = i - 1; break; }
+    }
+  }
+  if (hdr<0) {
+    console.warn('[parseSales] 헤더 못찾음');
+    return {sales:{}, recentSales:{}};
+  }
+  const h = rows[hdr];
+  let iStore = h.findIndex(v=>String(v||'').includes('지점'));
+  let iStyle = h.findIndex(v=>String(v||'').includes('스타일코드'));
+  // BW 표준 컬럼 fallback
+  if (iStore < 0) iStore = 0;
+  if (iStyle < 0) iStyle = 8;
+  // 판매수량 컬럼: MCH2 헤더 위 행들에서 찾기
+  let salesCols = [];
+  for (let i=Math.max(0,hdr-3); i<=hdr; i++) {
+    const row = rows[i]; if (!row) continue;
+    const cols = [];
+    for (let j=0;j<row.length;j++) {
+      if (String(row[j]||'').includes('판매수량')) cols.push(j);
+    }
+    if (cols.length > 0) { salesCols = cols; break; }
+  }
+  if (salesCols.length === 0) {
+    for (let j=0;j<h.length;j++) { if (String(h[j]||'').includes('판매수량')) salesCols.push(j); }
+  }
+  // BW 표준: 컬럼 22가 판매수량
+  if (salesCols.length === 0 && rows[hdr+1] && typeof rows[hdr+1][22] === 'number') {
+    salesCols = [22];
+  }
+  const recent = salesCols.length >= 3 ? salesCols.slice(-3) : salesCols;
+  const sales={}, recentSales={};
+  for (let i=hdr+1;i<rows.length;i++) {
+    const r=rows[i]; if(!r||!r[iStyle]) continue;
+    const style=String(r[iStyle]).trim();
+    const plant=extractPlant(String(r[iStore]||''));
+    if (!plant||!STORES[plant]) continue;
+    const total=salesCols.reduce((s,c)=>s+(parseFloat(r[c])||0),0);
+    const rec=recent.reduce((s,c)=>s+(parseFloat(r[c])||0),0);
+    if (!sales[style]) sales[style]={};
+    if (!recentSales[style]) recentSales[style]={};
+    sales[style][plant]=(sales[style][plant]||0)+total;
+    recentSales[style][plant]=(recentSales[style][plant]||0)+rec;
+  }
+  // 카테고리별 매장 집계 (반응 분배용)
+  const catStore4w = {}, catStore1m = {}, catStoreTotal = {};
+  const stylePlant4w = {};  // style->plant->4w sales
+  const mch2col = h.findIndex(v=>String(v||'').includes('MCH2')); // 루프 밖으로 이동
+  const recent4 = salesCols.length>=4 ? salesCols.slice(-4) : salesCols;
+  const recent9 = salesCols.length>=9 ? salesCols.slice(-9) : salesCols;
+  for (let i=hdr+1;i<rows.length;i++) {
+    const r=rows[i]; if(!r||!r[iStyle]) continue;
+    const style=String(r[iStyle]).trim();
+    const plant=extractPlant(String(r[iStore]||''));
+    if (!plant||!STORES[plant]) continue;
+    const mch2 = mch2col>=0 ? String(r[mch2col]||'').trim() : '';
+    const cat = MCH2_QUOTA_CAT[mch2] || MCH2_CAT[mch2] || '';
+    if (!cat) continue;
+    const q4w  = recent4.reduce((s,c)=>s+(parseFloat(r[c])||0),0);
+    const q1m  = recent9.reduce((s,c)=>s+(parseFloat(r[c])||0),0);
+    const qtot = salesCols.reduce((s,c)=>s+(parseFloat(r[c])||0),0);
+    if (!catStore4w[plant]) catStore4w[plant]={};
+    if (!catStore1m[plant]) catStore1m[plant]={};
+    if (!catStoreTotal[plant]) catStoreTotal[plant]={};
+    catStore4w[plant][cat]=(catStore4w[plant][cat]||0)+q4w;
+    catStore1m[plant][cat]=(catStore1m[plant][cat]||0)+q1m;
+    catStoreTotal[plant][cat]=(catStoreTotal[plant][cat]||0)+qtot;
+    if (!stylePlant4w[style]) stylePlant4w[style]={};
+    stylePlant4w[style][plant]=(stylePlant4w[style][plant]||0)+q4w;
+  }
+  return {sales, recentSales, catStore4w, catStore1m, catStoreTotal, stylePlant4w};
+}
+
+// ── 파싱: 가용재고 ────────────────────────────────────────────────────
+// 초도 판별: 최종재고반출 없으면 초도 (한 번도 출고 안 된 상품)
+function parseAvailableStock(wb) {
+  const ws = wb.Sheets['Sheet1'] || wb.Sheets[wb.SheetNames[0]];
+  const rows = sheetToRows(ws);
+  let hdr = -1;
+  for (let i=0;i<rows.length;i++) {
+    if (rows[i] && (String(rows[i][0]||'').includes('ID') || String(rows[i][1]||'').includes('자재'))) {
+      hdr = i; break;
+    }
+  }
+  if (hdr < 0) hdr = 0;
+  const h = rows[hdr];
+  const iStyle   = h.findIndex(v => String(v||'') === 'ID') >= 0 ? h.findIndex(v => String(v||'') === 'ID') : 0;
+  // v7: '자재' 컬럼 = SKU (예: BBBR2309165), '자재 그룹' = MC 코드 (예: 1WCAHH)
+  let iMat = h.findIndex(v => String(v||'').trim() === '자재');
+  let iMC  = h.findIndex(v => String(v||'').includes('자재 그룹') || String(v||'').includes('자재그룹'));
+  const iQty     = h.findIndex(v => String(v||'').includes('가용 수량') || String(v||'').includes('가용수량'));
+  const iName    = h.findIndex(v => String(v||'').includes('자재내역'));
+  const iLastOut = h.findIndex(v => String(v||'').includes('최종재고반출'));
+  const iPrice   = h.findIndex(v => String(v||'').includes('이동평균가'));
+  const iSeason  = h.findIndex(v => String(v||'').includes('시즌 연도') || String(v||'').includes('시즌연도'));
+  const iSeasonM = h.findIndex(v => String(v||'').trim() === '계절');
+  const iBrand   = h.findIndex(v => String(v||'').includes('오리지날 브랜드') || String(v||'').includes('오리지날브랜드'));
+  const iBrandName = h.findIndex(v => String(v||'').includes('브랜드 내역') || String(v||'').includes('브랜드내역'));
+  
+  // BW 가용재고 표준 컬럼 fallback (한글 매칭 실패 시)
+  if (iMat < 0) iMat = 1;        // 자재
+  if (iMC < 0) iMC = 2;          // 자재 그룹 (MC)
+  
+  const avail = {};
+  let totalRows = 0, totalNew = 0, mcMissing = 0;
+  
+  for (let i=hdr+1;i<rows.length;i++) {
+    const r = rows[i]; if (!r) continue;
+    const sku = String(r[iMat]||'').trim();
+    if (!sku) continue;
+    const style = sku;
+    
+    const mcVal = iMC >= 0 ? String(r[iMC]||'').trim() : '';
+    const mch2Val = mcVal.length >= 2 ? mcVal.substring(0, 2) : '';
+    
+    // v7: 자라/마시모두띠 토글 (기본 OFF = 제외)
+    const itemNameRaw = iName >= 0 ? String(r[iName]||'') : '';
+    const brandRaw = iBrand >= 0 ? String(r[iBrand]||'') : '';
+    const brandNameRaw = iBrandName >= 0 ? String(r[iBrandName]||'').trim() : '';
+    if (!appSettings.includeZara && isZaraBrand(itemNameRaw, brandRaw + ' ' + brandNameRaw)) continue;
+    
+    const qty = parseFloat(r[iQty]||0);
+    const lastOut = iLastOut >= 0 ? r[iLastOut] : null;
+    const seasonYr = iSeason >= 0 ? parseInt(String(r[iSeason]||'').trim()) : 0;
+    const seasonMonth = iSeasonM >= 0 ? String(r[iSeasonM]||'').trim() : '';
+    const noOutHist = !lastOut || String(lastOut).trim() === '' || String(lastOut).trim() === '-';
+    const isNew = (seasonYr >= 2026) && noOutHist;
+    
+    // v7: SS/FW 시즌 판별 — 시즌연도+계절 합쳐서 끝자리로 판별 (v6 getSeasonType 호환)
+    // "2026" + "0002" = "20260002" → 끝자리 "2" = SS
+    // "2024" + "0009" = "20240009" → 끝자리 "9" = FW
+    const seasonCode = seasonYr ? String(seasonYr) + (seasonMonth || '') : (seasonMonth || '');
+    const seasonType = getSeasonType(seasonCode);
+    
+    totalRows++;
+    if (isNew) totalNew++;
+    if (!mcVal) mcMissing++;
+
+    if (!avail[style]) {
+      avail[style] = {
+        name: iName >= 0 ? String(r[iName]||'').trim() : '',
+        avg_price: iPrice >= 0 ? (parseFloat(r[iPrice])||0) : 0,
+        total_qty: 0,
+        is_new: isNew,
+        mc: mcVal,
+        mch2: mch2Val,
+        season: seasonType,  // v7: SS/FW/ALL 자동 판별 (기존 'SS' 하드코딩 → 동적)
+        season_year: seasonYr ? String(seasonYr) + (seasonMonth || '') : '',
+        season_month: seasonMonth,
+        brand: brandRaw,
+        brand_name: brandNameRaw,
+      };
+    }
+    avail[style].total_qty += qty;
+    if (!isNew) avail[style].is_new = false;
+  }
+  
+  console.log(`[parseAvail] 총 ${totalRows}행, 신상 ${totalNew}행, MC누락 ${mcMissing}행, SKU ${Object.keys(avail).length}개`);
+  return avail;
+}
+
+// ── 파싱: 적정재고 ────────────────────────────────────────────────────
+function parseQuota(wb) {
+  const wsName = wb.SheetNames.includes('정리') ? '정리' : wb.SheetNames[0];
+  const ws = wb.Sheets[wsName];
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:true});
+
+  // 셀 정규화
+  const clean = v => v != null ? String(v).replace(/[\r\n\t]/g,'').trim() : '';
+
+  // 진열량 컬럼 위치 찾기 (헤더 전체 스캔)
+  let iDisplay = -1, iStore = -1, iCat = -1;
+  for (let i = 0; i < Math.min(rows.length, 6); i++) {
+    const r = rows[i]; if (!r) continue;
+    for (let j = 0; j < r.length; j++) {
+      const v = clean(r[j]);
+      if (v === '진열량') iDisplay = j;
+      if (v === '점포' || v === '점포명') iStore = j;
+      if (v === '카테고리') iCat = j;
+    }
+  }
+  // 헤더에서 못 찾으면 데이터 행으로 추정
+  // 콘솔 확인 결과: r[0]=매장, r[1]=카테고리, r[7]=진열량
+  if (iStore < 0) iStore = 0;
+  if (iCat < 0) iCat = 1;
+  if (iDisplay < 0) iDisplay = 7;
+
+  const CATS = CAT_LABELS;
+  const dq = {};
+  let curStore = null;
+
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i]; if (!r) continue;
+    const c1 = clean(r[iStore]);
+    const c2 = clean(r[iCat]);
+    if (c1 && c1 !== '-' && c1 !== '계' && c1 !== '점포' && c2 === '소계') {
+      curStore = c1; continue;
+    }
+    if (curStore && CATS.includes(c2)) {
+      const raw = r[iDisplay];
+      const val = typeof raw === 'number' ? raw : parseFloat(String(raw||'').replace(/,/g,''))||0;
+      dq[curStore + '__' + c2] = val;
+    }
+  }
+  return dq;
+}
+
+// ── 주간 판매량 사전 계산 ─────────────────────────────────────────────
+function preCalcWeeklySales(recentSales, inv) {
+  const weeklyMap = {};
+  for (const [style, storeSales] of Object.entries(recentSales)) {
+    if (!inv[style]) continue;
+    const quotaCat = MCH2_QUOTA_CAT[inv[style].mch2] || inv[style].cat;
+    for (const [plant, qty] of Object.entries(storeSales)) {
+      const key = plant + '__' + quotaCat;
+      weeklyMap[key] = (weeklyMap[key] || 0) + qty;
+    }
+  }
+  for (const k of Object.keys(weeklyMap)) weeklyMap[k] /= 12;
+  return weeklyMap;
+}
+
+// 월간 판매량 사전 계산 (최근 3개월 ÷ 3)
+function preCalcMonthlySales(recentSales, inv) {
+  const monthlyMap = {};
+  for (const [style, storeSales] of Object.entries(recentSales)) {
+    if (!inv[style]) continue;
+    const quotaCat = MCH2_QUOTA_CAT[inv[style].mch2] || inv[style].cat;
+    for (const [plant, qty] of Object.entries(storeSales)) {
+      const key = plant + '__' + quotaCat;
+      monthlyMap[key] = (monthlyMap[key] || 0) + qty;
+    }
+  }
+  for (const k of Object.keys(monthlyMap)) monthlyMap[k] /= 3;
+  return monthlyMap;
+}
+
+// ── 유사스타일 인덱스 ─────────────────────────────────────────────────
+function buildSimilarIndex(inv) {
+  const idx = {};
+  for (const [m, i] of Object.entries(inv)) {
+    if (!idx[i.mch2]) idx[i.mch2] = [];
+    idx[i.mch2].push({
+      mat:m, name:i.name, season:i.season,
+      season_month:i.season_month, size:i.size, color:i.color, mch2:i.mch2,
+      mc:i.mc||'',
+      init_price:i.init_price||i.avg_price,
+      cur_price:i.cur_price||i.avg_price,
+      avg_price:i.avg_price,
+    });
+  }
+  return idx;
+}
+
+// ── 유사스타일 찾기 (최초판매가 + 현판가 기준) ────────────────────────
+function findSimilar(mat, info, inv, priceRange, remaining, similarIdx, plant, stylePlant4w, mcStorePlant, simUsage, simMaxUse) {
+  const pool = similarIdx ? (similarIdx[info.mch2]||[]) : Object.entries(inv).map(([m,i])=>({mat:m,...i}));
+  const candidates = [];
+  const baseInit = info.init_price || info.avg_price || 1;
+  const baseCur  = info.cur_price  || info.avg_price || 1;
+  const baseItem = (info.mc||'').slice(-2); // MC 마지막 2자리 = 아이템
+  const plantMc = (mcStorePlant||{})[plant] || {};
+
+  for (const i of pool) {
+    const m = i.mat;
+    if (m===mat) continue;
+    if ((remaining[m]||0)<2) continue;
+    if (simMaxUse && (simUsage[m]||0) >= simMaxUse) continue; // 쏠림 방지: 대체품 1개당 사용 상한
+
+    // 필수: 최초판매가 ±priceRange%
+    const iInit = i.init_price || i.avg_price || 0;
+    if (baseInit>0 && Math.abs(iInit - baseInit) / baseInit > priceRange) continue;
+
+    // 필수: 현판가 ±priceRange%
+    const iCur = i.cur_price || i.avg_price || 0;
+    if (baseCur>0 && Math.abs(iCur - baseCur) / baseCur > priceRange) continue;
+
+    // 매장수요 게이트: 대체품 MC가 이 매장에서 안 팔리면 제외
+    const mcVel = plantMc[i.mc||''] || 0;
+    if (mcVel <= 0) continue;
+
+    // 점수: 우선순위 MCH2(필수) → MC아이템 → 시즌 → 사이즈+컬러
+    let score = 0;
+    const iItem = (i.mc||'').slice(-2);
+    if (baseItem && iItem && baseItem===iItem) score += 8; // MC 아이템 동일
+    const sameSeason = (i.season===info.season)||(i.season==='ALL')||(info.season==='ALL');
+    if (sameSeason) score += 4; // 시즌 일치
+    const sameSize  = info.size  && i.size  && info.size!=='#'  && i.size!=='#'  && info.size===i.size;
+    const sameColor = info.color && i.color && info.color!=='#' && i.color!=='#' && info.color===i.color;
+    if (sameSize && sameColor) score += 2;
+    else if (sameSize) score += 1;
+    const styleVel = ((stylePlant4w||{})[m]||{})[plant] || 0;
+    candidates.push({...i, score, styleVel, mcVel});
+  }
+  if (!candidates.length) return null;
+  // 점수 → 매장 스타일 판매속도 → 매장 MC 판매속도 순
+  candidates.sort((a,b) => b.score - a.score || b.styleVel - a.styleVel || b.mcVel - a.mcVel);
+  const best = candidates[0];
+  let matchLabel = '카테고리+가격대';
+  if (best.score >= 12) matchLabel = 'MC+시즌+사이즈 일치';
+  else if (best.score >= 8) matchLabel = 'MC아이템 일치';
+  else if (best.score >= 4) matchLabel = '시즌 일치';
+  else if (best.score >= 2) matchLabel = '사이즈+컬러 일치';
+  else if (best.score >= 1) matchLabel = '사이즈 일치';
+  return {...best, matchLabel};
+}
+
+// ── 메인 분배 로직 ────────────────────────────────────────────────────
+function distribute(inv, salesData, availStock, weather) {
+  const {sales, recentSales, catStore4w, catStore1m, catStoreTotal, stylePlant4w, mcStorePlant} = salesData;
+  const initResults=[], reactResults=[], similar=[];
+  const simUsage = {};  // 유사스타일 대체품별 사용 라인수 (쏠림 방지)
+  const BASE_QTY         = parseInt(document.getElementById('cfg-base').value)||3;
+  const INIT_RATIO       = (parseInt(document.getElementById('cfg-init-ratio').value)||80)/100;
+  const INIT_REACT_RATIO = (parseInt(document.getElementById('cfg-init-react-ratio').value)||60)/100; // 초도:반응 비율
+  const PRICE_RANGE      = (parseInt(document.getElementById('cfg-price').value)||30)/100;
+  const MIN_AVAIL        = parseInt(document.getElementById('cfg-min-avail').value)||1;
+  const MAX_PER_SKU      = parseInt(document.getElementById('cfg-max-per-sku')?.value)||3;  // v7: SKU당 매장당 최대
+  const dowMult          = getDowMult();
+
+  // 유사스타일 인덱스
+  const similarIdx = buildSimilarIndex(inv);
+
+  // 가용재고 remaining
+  const remaining = {};
+  for (const [mat, info] of Object.entries(availStock)) remaining[mat] = info.total_qty;
+
+  // 계절월 유효성 체크: P차수(숫자)만 분배. 알파벳/공백 + 차이 큰 P 제외
+  function isValidSeasonMonth(smCode) {
+    const p = seasonMonthPriority(smCode);
+    if (p.isInvalid) return false;
+    if (p.mult <= 0) return false;
+    return true;
+  }
+
+  // 매장별 카테고리 현재재고 계산 (SS 재고만)
+  const storeCatQty = {};
+  for (const [style, info] of Object.entries(inv)) {
+    if (info.season !== 'SS') continue; // SS 재고만
+    const cat = MCH2_QUOTA_CAT[info.mch2] || info.cat;
+    if (!cat) continue;
+    for (const [plant, qty] of Object.entries(info.store_qty||{})) {
+      if (!storeCatQty[plant]) storeCatQty[plant] = {};
+      storeCatQty[plant][cat] = (storeCatQty[plant][cat]||0) + qty;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // 통합 분배: 카테고리×MC 단위 부족분 채우기 (v8)
+  // ══════════════════════════════════════════════════════════════════════
+  // 컨셉: "판매된 만큼 넣는다" → 매장 재고 = 진열량 유지
+  //   1) 매장×카테고리 부족분 = 진열량 - 현재재고 (상한)
+  //   2) 매장×MC 채울 양 = MC 판매수량 (카테고리 부족분 안에서 비례 축소)
+  //   3) 각 MC 채우는 우선순위: 신상SS → 이월SS → 유사스타일 (모두 동일 MC 안에서)
+  //   4) 한 스타일에 매장당 BASE_QTY(3개) 초과 분배 안 됨 → 사이즈 균형 유지
+  //   5) FW는 완전 제외, 아동 카테고리 제외
+  
+  const _selectedStores = appSettings.selectedStores && appSettings.selectedStores.length > 0
+    ? appSettings.selectedStores : Object.keys(STORES);
+  const SIM_MAX_USE = Math.max(3, _selectedStores.length);  // 대체품 1개당 최대 사용 라인수
+
+  // 진단 로그 집계
+  const diag = {
+    catSkipReasons: {dispZero:0, catShortageZero:0, totalDemandZero:0, processed:0},
+    mcStats: [],
+    newSSAvailByMc: {},
+    carrySSAvailByMc: {},
+    mcStorePlantSummary: {},
+  };
+  for (const [mat, info] of Object.entries(availStock)) {
+    if (info.season !== 'SS' || !info.mc) continue;
+    const target = info.is_new ? diag.newSSAvailByMc : diag.carrySSAvailByMc;
+    target[info.mc] = (target[info.mc]||0) + (info.total_qty||0);
+  }
+  // mcStorePlant 통계
+  let totalMcEntries = 0;
+  for (const [plant, mcs] of Object.entries(mcStorePlant||{})) {
+    diag.mcStorePlantSummary[plant] = Object.keys(mcs).length;
+    totalMcEntries += Object.keys(mcs).length;
+  }
+  if (typeof log === 'function') {
+    log(`[진단] 신상SS MC ${Object.keys(diag.newSSAvailByMc).length}종 / 이월SS MC ${Object.keys(diag.carrySSAvailByMc).length}종`, 'info');
+    log(`[진단] mcStorePlant: ${Object.keys(mcStorePlant||{}).length}매장 × 평균 ${Math.round(totalMcEntries/Math.max(1,Object.keys(mcStorePlant||{}).length))}MC = ${totalMcEntries} 매장×MC 조합`, 'info');
+  }
+
+  for (const plant of _selectedStores) {
+    if (!STORES[plant]) continue;
+    const storeName = STORES[plant].name;
+
+    for (const cat of CAT_LABELS) {
+      if (cat === '아동') continue;                      // 아동 분배 제외
+      const disp = displayQty[storeName+'__'+cat] || 0;
+      if (disp <= 0) { diag.catSkipReasons.dispZero++; continue; }
+      const cur  = (storeCatQty[plant]||{})[cat] || 0;
+
+      // (1) 카테고리 부족분 (상한)
+      const catShortage = disp - cur;
+      if (catShortage <= 0) { diag.catSkipReasons.catShortageZero++; continue; }
+
+      // (2) 이 매장의 MC별 판매수량 → cat에 속한 MC만 추리기
+      const plantMcSales = (mcStorePlant||{})[plant] || {};
+      const mcDemand = {};
+      let totalMcDemand = 0;
+      for (const [mc, soldQty] of Object.entries(plantMcSales)) {
+        const mch2  = mc.length >= 2 ? mc.substring(0, 2) : '';
+        const mcCat = MCH2_QUOTA_CAT[mch2] || MCH2_CAT[mch2] || '';
+        if (mcCat !== cat) continue;
+        mcDemand[mc] = soldQty;
+        totalMcDemand += soldQty;
+      }
+      if (totalMcDemand === 0) { diag.catSkipReasons.totalDemandZero++; continue; }
+      diag.catSkipReasons.processed++;
+
+      // MC 합계 > 카테고리 부족분 → 비례 축소 (진열량 못 넘김)
+      const scale = totalMcDemand > catShortage ? (catShortage / totalMcDemand) : 1.0;
+
+      // (3) 각 MC 채우기: 신상SS → 이월SS → 유사스타일
+      for (const [mc, demand] of Object.entries(mcDemand)) {
+        let mcNeed = Math.round(demand * scale);
+        const mcNeedOrig = mcNeed;
+        if (mcNeed <= 0) continue;
+        const newAvailMc = diag.newSSAvailByMc[mc] || 0;
+        const carryAvailMc = diag.carrySSAvailByMc[mc] || 0;
+        let allocNew = 0, allocCarry = 0, allocSim = 0;
+
+        // ── 1순위: 신상SS (동일 MC, 가용재고 많은 순) ──
+        // ★ inv[mat] 의존성 제거: 신상은 매장 미입고여도 본사 가용재고로 분배 가능
+        const newStyles = Object.entries(availStock)
+          .filter(([mat, info]) => {
+            if (!info.is_new) return false;
+            if (info.season !== 'SS') return false;
+            if (info.mc !== mc) return false;
+            if (info.total_qty < MIN_AVAIL) return false;
+            if ((remaining[mat]||0) <= 0) return false;
+            if (!isValidSeasonMonth(info.season_month)) return false;
+            return true;
+          })
+          .sort((a,b) => b[1].total_qty - a[1].total_qty);
+
+        for (const [mat, availInfo] of newStyles) {
+          if (mcNeed <= 0) break;
+          if ((remaining[mat]||0) <= 0) continue;
+          const alloc = Math.min(BASE_QTY, MAX_PER_SKU, remaining[mat]||0, mcNeed);
+          if (alloc <= 0) continue;
+
+          // availInfo에서 직접 가져옴 (inv 없어도 됨)
+          const smP = seasonMonthPriority(availInfo.season_month);
+          const wm  = weatherMult(availInfo.season, weather);
+          initResults.push({
+            mat, plant, qty: alloc, cat, dist_type: 'init',
+            name: availInfo.name, avg_price: availInfo.avg_price,
+            store_name: storeName, season: availInfo.season,
+            season_month: availInfo.season_month, season_month_label: smP.label,
+            weather_mult: wm,
+            optimal_stock: disp,
+            current_stock: Math.round(cur),
+            avail_qty: availInfo.total_qty, is_similar: false,
+            mc: availInfo.mc || mc, brand: availInfo.brand || '', brand_name: availInfo.brand_name || '',
+          });
+          remaining[mat] = (remaining[mat]||0) - alloc;
+          mcNeed -= alloc;
+          allocNew += alloc;
+        }
+
+        // ── 1.5순위: 같은 MC4(앞 4자리) 다른 MC 신상SS fallback ──
+        // 옵션 A: 1WCABL 수요인데 신상 0이면 → 같은 1WCA(여성카디건군) 다른 MC 신상으로 채움
+        if (mcNeed > 0 && mc.length >= 4) {
+          const mc4 = mc.substring(0, 4);
+          const newStylesMc4 = Object.entries(availStock)
+            .filter(([mat, info]) => {
+              if (!info.is_new) return false;
+              if (info.season !== 'SS') return false;
+              if (!info.mc || info.mc.length < 4) return false;
+              if (info.mc === mc) return false;                // 동일 MC는 이미 처리됨
+              if (info.mc.substring(0, 4) !== mc4) return false; // 같은 MC4만
+              if (info.total_qty < MIN_AVAIL) return false;
+              if ((remaining[mat]||0) <= 0) return false;
+              if (!isValidSeasonMonth(info.season_month)) return false;
+              return true;
+            })
+            .sort((a,b) => b[1].total_qty - a[1].total_qty);
+
+          for (const [mat, availInfo] of newStylesMc4) {
+            if (mcNeed <= 0) break;
+            if ((remaining[mat]||0) <= 0) continue;
+            const alloc = Math.min(BASE_QTY, MAX_PER_SKU, remaining[mat]||0, mcNeed);
+            if (alloc <= 0) continue;
+
+            const smP = seasonMonthPriority(availInfo.season_month);
+            const wm  = weatherMult(availInfo.season, weather);
+            initResults.push({
+              mat, plant, qty: alloc, cat, dist_type: 'init',
+              name: availInfo.name, avg_price: availInfo.avg_price,
+              store_name: storeName, season: availInfo.season,
+              season_month: availInfo.season_month, season_month_label: smP.label,
+              weather_mult: wm,
+              optimal_stock: disp,
+              current_stock: Math.round(cur),
+              avail_qty: availInfo.total_qty, is_similar: false,
+              mc: availInfo.mc, brand: availInfo.brand || '', brand_name: availInfo.brand_name || '',
+            });
+            remaining[mat] = (remaining[mat]||0) - alloc;
+            mcNeed -= alloc;
+            allocNew += alloc;
+          }
+        }
+
+        // ── 2순위: 이월SS (동일 MC, 매장 판매량 많은 순) ──
+        // ★ inv[mat] 의존성 제거: 이월도 본사 가용재고 기준
+        const carryStyles = Object.entries(availStock)
+          .filter(([mat, info]) => {
+            if (info.is_new) return false;
+            if (info.season !== 'SS') return false;
+            if (info.mc !== mc) return false;
+            if ((remaining[mat]||0) <= 0) return false;
+            if (!isValidSeasonMonth(info.season_month)) return false;
+            return true;
+          })
+          .sort((a,b) => {
+            const sa = ((stylePlant4w||{})[a[0]]||{})[plant] || 0;
+            const sb = ((stylePlant4w||{})[b[0]]||{})[plant] || 0;
+            return sb - sa;
+          });
+
+        for (const [mat, info] of carryStyles) {
+          if (mcNeed <= 0) break;
+          if ((remaining[mat]||0) <= 0) continue;
+          const alloc = Math.min(BASE_QTY, MAX_PER_SKU, remaining[mat]||0, mcNeed);
+          if (alloc <= 0) continue;
+
+          const smP = seasonMonthPriority(info.season_month);
+          const wm  = weatherMult(info.season, weather);
+          reactResults.push({
+            mat, plant, qty: alloc, cat, dist_type: 'react',
+            name: info.name, avg_price: info.avg_price,
+            store_name: storeName, season: info.season,
+            season_month: info.season_month, season_month_label: smP.label,
+            weather_mult: wm,
+            optimal_stock: disp,
+            current_stock: Math.round(cur),
+            avail_qty: info.total_qty, is_similar: false,
+            mc: info.mc || mc, brand: info.brand || '', brand_name: info.brand_name || '',
+            velocity_tier: '판매보충',
+            sales_velocity: 0,
+          });
+          remaining[mat] = (remaining[mat]||0) - alloc;
+          mcNeed -= alloc;
+          allocCarry += alloc;
+        }
+
+        // ── 2.5순위: 같은 MC4(앞 4자리) 다른 MC 이월SS fallback ──
+        if (mcNeed > 0 && mc.length >= 4) {
+          const mc4 = mc.substring(0, 4);
+          const carryStylesMc4 = Object.entries(availStock)
+            .filter(([mat, info]) => {
+              if (info.is_new) return false;
+              if (info.season !== 'SS') return false;
+              if (!info.mc || info.mc.length < 4) return false;
+              if (info.mc === mc) return false;
+              if (info.mc.substring(0, 4) !== mc4) return false;
+              if ((remaining[mat]||0) <= 0) return false;
+              if (!isValidSeasonMonth(info.season_month)) return false;
+              return true;
+            })
+            .sort((a,b) => {
+              const sa = ((stylePlant4w||{})[a[0]]||{})[plant] || 0;
+              const sb = ((stylePlant4w||{})[b[0]]||{})[plant] || 0;
+              return sb - sa;
+            });
+
+          for (const [mat, info] of carryStylesMc4) {
+            if (mcNeed <= 0) break;
+            if ((remaining[mat]||0) <= 0) continue;
+            const alloc = Math.min(BASE_QTY, MAX_PER_SKU, remaining[mat]||0, mcNeed);
+            if (alloc <= 0) continue;
+
+            const smP = seasonMonthPriority(info.season_month);
+            const wm  = weatherMult(info.season, weather);
+            reactResults.push({
+              mat, plant, qty: alloc, cat, dist_type: 'react',
+              name: info.name, avg_price: info.avg_price,
+              store_name: storeName, season: info.season,
+              season_month: info.season_month, season_month_label: smP.label,
+              weather_mult: wm,
+              optimal_stock: disp,
+              current_stock: Math.round(cur),
+              avail_qty: info.total_qty, is_similar: false,
+              mc: info.mc, brand: info.brand || '', brand_name: info.brand_name || '',
+              velocity_tier: '판매보충',
+              sales_velocity: 0,
+            });
+            remaining[mat] = (remaining[mat]||0) - alloc;
+            mcNeed -= alloc;
+            allocCarry += alloc;
+          }
+        }
+
+        // ── 3순위: 유사스타일 (이월SS도 부족 시) ──
+        // ★ inv[mat] 의존성 제거: availStock 정보 활용
+        if (mcNeed > 0) {
+          for (const [mat, origInfo] of carryStyles) {
+            if (mcNeed <= 0) break;
+            if ((remaining[mat]||0) > 0) continue;
+            // findSimilar는 inv를 인자로 받지만 매장에 없는 신상도 매칭하려면 inv에 폴백 필요
+            // 안전하게 fallback 객체 구성
+            const fallbackInv = inv[mat] || {
+              name: origInfo.name, mc: origInfo.mc, mch2: origInfo.mch2,
+              cat: cat, brand: origInfo.brand, brand_name: origInfo.brand_name || '',
+              avg_price: origInfo.avg_price, init_price: origInfo.avg_price, cur_price: origInfo.avg_price,
+              season: origInfo.season, season_month: origInfo.season_month,
+              size: '', color: '',
+            };
+            const simStyle = findSimilar(mat, fallbackInv, inv, PRICE_RANGE, remaining, similarIdx, plant, stylePlant4w, mcStorePlant, simUsage, SIM_MAX_USE);
+            if (!simStyle) continue;
+            const simAvail = availStock[simStyle.mat];
+            if (!simAvail || simAvail.season !== 'SS') continue;   // 유사스타일도 SS만
+            if ((remaining[simStyle.mat]||0) <= 0) continue;
+
+            const simQty = Math.min(BASE_QTY, MAX_PER_SKU, remaining[simStyle.mat]||0, mcNeed);
+            if (simQty <= 0) continue;
+
+            similar.push({
+              orig_mat: mat, orig_name: origInfo.name,
+              sim_mat: simStyle.mat, sim_name: simStyle.name,
+              cat, plant, store_name: storeName,
+              match_label: simStyle.matchLabel, reason: '재고 부족 유사스타일 대체'
+            });
+            const simInv = inv[simStyle.mat] || simAvail || {};
+            reactResults.push({
+              mat: simStyle.mat, plant, qty: simQty, cat, dist_type: 'react',
+              name: simStyle.name, avg_price: simStyle.avg_price,
+              store_name: storeName, season: simStyle.season,
+              season_month: simStyle.season_month, season_month_label: '유사스타일',
+              weather_mult: 1.0, optimal_stock: disp,
+              current_stock: Math.round(cur),
+              avail_qty: simAvail.total_qty,
+              is_similar: true,
+              mc: simInv.mc || simAvail.mc || '', brand: simInv.brand || simAvail.brand || '', brand_name: simInv.brand_name || simAvail.brand_name || '',
+              velocity_tier: '유사스타일',
+              sales_velocity: 0,
+            });
+            remaining[simStyle.mat] = (remaining[simStyle.mat]||0) - simQty;
+            simUsage[simStyle.mat] = (simUsage[simStyle.mat]||0) + 1; // 쏠림 카운트
+            mcNeed -= simQty;
+            allocSim += simQty;
+          }
+        }
+        
+        // 진단: MC별 통계 누적
+        diag.mcStats.push({
+          plant: STORES[plant].name, cat, mc, demand, mcNeedOrig,
+          newAvail: newAvailMc, carryAvail: carryAvailMc,
+          allocNew, allocCarry, allocSim, leftover: mcNeed
+        });
+      }
+    }
+  }
+  
+  // 진단 결과 (window 전역에 저장 — 콘솔에서 window._lastDistDiag로 확인 가능)
+  const sumByCat = {};
+  for (const s of diag.mcStats) {
+    const k = s.plant + '|' + s.cat;
+    if (!sumByCat[k]) sumByCat[k] = {plant:s.plant, cat:s.cat, mcCount:0, demand:0, allocNew:0, allocCarry:0, allocSim:0, leftover:0, mcNoNew:0, mcNoCarry:0};
+    sumByCat[k].mcCount++;
+    sumByCat[k].demand += s.demand;
+    sumByCat[k].allocNew += s.allocNew;
+    sumByCat[k].allocCarry += s.allocCarry;
+    sumByCat[k].allocSim += s.allocSim;
+    sumByCat[k].leftover += s.leftover;
+    if (s.newAvail === 0) sumByCat[k].mcNoNew++;
+    if (s.carryAvail === 0) sumByCat[k].mcNoCarry++;
+  }
+  
+  window._lastDistDiag = diag;
+  window._lastDistSum = sumByCat;
+  
+  if (typeof log === 'function') {
+    log(`[진단] 매장×카테고리 SKIP: 진열량0=${diag.catSkipReasons.dispZero} 부족분0=${diag.catSkipReasons.catShortageZero} MC매출0=${diag.catSkipReasons.totalDemandZero} 처리=${diag.catSkipReasons.processed}`, 'info');
+    const cats = Object.values(sumByCat).sort((a,b) => (b.allocNew+b.allocCarry+b.allocSim) - (a.allocNew+a.allocCarry+a.allocSim));
+    for (const c of cats) {
+      const total = c.allocNew + c.allocCarry + c.allocSim;
+      const newPct = total > 0 ? Math.round(c.allocNew/total*100) : 0;
+      log(`  ${c.plant}/${c.cat}: 수요${c.demand} → 신상${c.allocNew}(${newPct}%) 이월${c.allocCarry} 유사${c.allocSim}`, 'info');
+    }
+  }
+
+  // 트리밍 없음 (신상 우선 자연 결정)
+  const trimmedInit  = initResults;
+  const trimmedReact = reactResults;
+
+    // 케파 적용 (0이면 무제한)
+  let allResults = [...trimmedInit, ...trimmedReact];
+  const CAPA = parseInt(document.getElementById('cfg-capa').value)||0;
+  if (CAPA > 0) {
+    let used = 0;
+    allResults = allResults.filter(r => { if(used+r.qty<=CAPA){used+=r.qty;return true;} return false; });
+  }
+  const finalInitQty  = allResults.filter(r=>r.dist_type==='init').reduce((s,r)=>s+r.qty,0);
+  const finalReactQty = allResults.filter(r=>r.dist_type==='react').reduce((s,r)=>s+r.qty,0);
+  return {results:allResults, similar,
+    initCount:allResults.filter(r=>r.dist_type==='init').length,
+    reactCount:allResults.filter(r=>r.dist_type==='react').length,
+    initQty:finalInitQty, reactQty:finalReactQty};
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// v7 데일리 분배 함수 (추가)
+// ═══════════════════════════════════════════════════════════════════════
+
+function extractD1Sales(wb) {
+  const dbg = (msg) => { console.log('[D1]', msg); if (typeof log==='function') log('  '+msg, 'info'); };
+  
+  const ws = selectSheet(wb, '매출상세분석', '매출');
+  dbg(`시트 ref: ${ws['!ref']} (전체 시트: ${wb.SheetNames.join(', ')})`);
+  
+  const rows = sheetToRows(ws);
+  dbg(`총 행 수: ${rows.length}`);
+  
+  // 헤더 행 찾기 (MCH2 매칭 → 데이터 패턴 fallback)
+  let hdr = -1;
+  for (let i=0;i<rows.length;i++) {
+    if (rows[i] && rows[i].some(v => String(v||'').indexOf('MCH2') >= 0)) { hdr = i; break; }
+  }
+  if (hdr < 0) {
+    for (let i=0; i<Math.min(15, rows.length); i++) {
+      const r = rows[i]; if (!r) continue;
+      let hasDate = false, hasMC = false;
+      for (const v of r) {
+        if (!v) continue;
+        let s = (v instanceof Date) 
+          ? `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`
+          : String(v).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) hasDate = true;
+        if (/^[0-9][A-Z]{2}[A-Z0-9]{3}$/i.test(s)) hasMC = true;
+      }
+      if (hasDate && hasMC) { hdr = i - 1; dbg(`헤더 자동감지: ${hdr}`); break; }
+    }
+  }
+  if (hdr < 0) {
+    dbg('⚠ 헤더 행 못찾음');
+    return {zoneItemSales:{}, skuPlantSales:{}, dateLabels:[], totalDays:0};
+  }
+  dbg(`헤더 행: ${hdr}`);
+  
+  const h = rows[hdr] || [];
+  const hUp = rows[hdr-1] || [];
+  
+  // 한글 매칭
+  let iStore = h.findIndex(v => String(v||'').indexOf('지점') >= 0);
+  let iStyle = h.findIndex(v => String(v||'').indexOf('스타일코드') >= 0);
+  let iMC    = h.findIndex(v => String(v||'').indexOf('MC(자재그룹)') >= 0);
+  let iMch2  = h.findIndex(v => String(v||'').indexOf('MCH2') >= 0);
+  let iBrand = h.findIndex(v => String(v||'').indexOf('오리지날브랜드') >= 0);
+  let iDate  = h.findIndex(v => String(v||'').trim() === '일');
+  let iQty = -1;
+  for (let j=0;j<hUp.length;j++) {
+    if (String(hUp[j]||'').trim() === '판매수량') { iQty = j; break; }
+  }
+  
+  // BW 매출상세분석 표준 컬럼 fallback (검증된 위치)
+  if (iStore < 0) iStore = 0;
+  if (iMC < 0) iMC = 2;
+  if (iMch2 < 0) iMch2 = 4;
+  if (iBrand < 0) iBrand = 7;
+  if (iStyle < 0) iStyle = 8;
+  if (iDate < 0) iDate = 16;
+  if (iQty < 0) iQty = 22;
+  const iName = iStyle + 1;
+  
+  dbg(`컬럼: 지점=${iStore}, 스타일=${iStyle}, MC=${iMC}, MCH2=${iMch2}, 일자=${iDate}, 판매수량=${iQty}`);
+  
+  // 데이터 검증: 첫 행에서 일자/판매수량 패턴 확인
+  if (rows[hdr+1]) {
+    const dr = rows[hdr+1];
+    const qv = dr[iQty];
+    // 판매수량이 너무 크면 매출액 컬럼일 가능성 → 22로 보정
+    if (typeof qv === 'number' && qv > 1000 && typeof dr[22] === 'number' && dr[22] >= 0 && dr[22] < 1000) {
+      dbg(`⚠ 판매수량 ${qv}장은 비정상 → 컬럼 22로 보정`);
+      iQty = 22;
+    }
+  }
+  
+  // 데이터 수집
+  const allDates = new Set();
+  const dataRows = [];
+  for (let i=hdr+1;i<rows.length;i++) {
+    const r = rows[i]; if (!r || !r[iStyle]) continue;
+    const dRaw = r[iDate];
+    if (!dRaw) continue;
+    let dStr = (dRaw instanceof Date) 
+      ? `${dRaw.getFullYear()}-${String(dRaw.getMonth()+1).padStart(2,'0')}-${String(dRaw.getDate()).padStart(2,'0')}`
+      : String(dRaw).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dStr)) continue;
+    
+    allDates.add(dStr);
+    dataRows.push({
+      style: String(r[iStyle]).trim(),
+      plant: extractPlant(String(r[iStore]||'')),
+      mc: String(r[iMC]||'').trim(),
+      mch2: String(r[iMch2]||'').trim(),
+      name: String(r[iName]||'').trim(),
+      brand: String(r[iBrand]||'').trim(),
+      brand_name: String(r[iBrand+1]||'').trim(),
+      date: dStr,
+      qty: parseFloat(r[iQty]) || 0,
+    });
+  }
+  
+  const sortedDates = Array.from(allDates).sort();
+  if (sortedDates.length === 0) {
+    dbg('⚠ 일자 데이터 없음');
+    return {zoneItemSales:{}, skuPlantSales:{}, dateLabels:[], totalDays:0};
+  }
+  dbg(`일자 범위: ${sortedDates[0]} ~ ${sortedDates[sortedDates.length-1]} (${sortedDates.length}일)`);
+  
+  // D-1 결정 (월요일=3일치, 그외=1일치)
+  const dow = new Date().getDay();
+  const daysToUse = (dow === 1) ? 3 : 1;
+  const targetDates = sortedDates.slice(-daysToUse);
+  dbg(`오늘 ${['일','월','화','수','목','금','토'][dow]}요일 → D-1 ${daysToUse}일치: ${targetDates.join(', ')}`);
+  
+  // 합산
+  const zoneItemSales = {};
+  const skuPlantSales = {};
+  const tSet = new Set(targetDates);
+  let used = 0, skipZ = 0, skipF = 0;
+  
+  for (const row of dataRows) {
+    if (!tSet.has(row.date)) continue;
+    if (!row.plant || !STORES[row.plant]) continue;
+    const zone = resolveZone(row.mc, row.mch2);
+    if (!zone || zone === '기타') { skipZ++; continue; }
+    if (shouldExcludeItem(zone, row.name, row.brand + ' ' + row.brand_name)) { skipF++; continue; }
+    const item = resolveItem(row.mc) || '기타';
+    const qty = row.qty;
+    if (qty <= 0) continue;
+    
+    if (!zoneItemSales[row.plant]) zoneItemSales[row.plant] = {};
+    if (!zoneItemSales[row.plant][zone]) zoneItemSales[row.plant][zone] = {};
+    zoneItemSales[row.plant][zone][item] = (zoneItemSales[row.plant][zone][item]||0) + qty;
+    
+    if (!skuPlantSales[row.style]) skuPlantSales[row.style] = {};
+    skuPlantSales[row.style][row.plant] = (skuPlantSales[row.style][row.plant]||0) + qty;
+    used++;
+  }
+  
+  dbg(`처리: ${used}행, 조닝미식별 ${skipZ}, 토글제외 ${skipF}`);
+  for (const [pl, zm] of Object.entries(zoneItemSales)) {
+    const plName = STORES[pl] ? STORES[pl].name : pl;
+    const plQty = Object.values(zm).reduce((s, im) => s + Object.values(im).reduce((s2,q)=>s2+q,0), 0);
+    dbg(`  ${plName}(${pl}): ${plQty}장`);
+  }
+  
+  return {zoneItemSales, skuPlantSales, dateLabels: targetDates, totalDays: targetDates.length};
+}
+
+
+// ── 매출 추출 (모드별 기간 필터) ──
+// 매출상세분석에서 특정 기간만 추출해서 v6 distribute()가 받는 salesData 형태로 반환
+// startDate, endDate: 'YYYY-MM-DD' (포함). null이면 전체
+function extractSalesByPeriod(wb, startDate, endDate) {
+  const dbg = (msg) => { console.log('[Sales]', msg); if (typeof log==='function') log('  '+msg, 'info'); };
+  
+  const ws = selectSheet(wb, '매출상세분석', '매출');
+  const rows = sheetToRows(ws);
+  
+  // 헤더 행 찾기
+  let hdr = -1;
+  for (let i=0;i<rows.length;i++) {
+    if (rows[i] && rows[i].some(v => String(v||'').indexOf('MCH2') >= 0)) { hdr = i; break; }
+  }
+  if (hdr < 0) {
+    for (let i=0; i<Math.min(15, rows.length); i++) {
+      const r = rows[i]; if (!r) continue;
+      let hasDate = false, hasMC = false;
+      for (const v of r) {
+        if (!v) continue;
+        let s = (v instanceof Date) 
+          ? `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`
+          : String(v).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) hasDate = true;
+        if (/^[0-9][A-Z]{2}[A-Z0-9]{3}$/i.test(s)) hasMC = true;
+      }
+      if (hasDate && hasMC) { hdr = i - 1; break; }
+    }
+  }
+  if (hdr < 0) {
+    dbg('⚠ 헤더 못찾음 → 빈 결과');
+    return {sales:{}, recentSales:{}, catStore4w:{}, catStore1m:{}, catStoreTotal:{}, stylePlant4w:{}, dateLabels:[], totalDays:0};
+  }
+  
+  const h = rows[hdr] || [];
+  // ⚡ 공통 헤더 매핑 (이름 기반 — 컬럼 위치 변동 무관)
+  const _hdrResult = findHeaderColumns(rows, {
+    iStore: ['지점(Now)', '지점'],
+    iStyle: ['스타일코드(Now)', '스타일코드'],
+    iMch2:  ['MCH2(Now)', 'MCH2'],
+    iMC:    ['MC(자재그룹)(Now)', 'MC(자재그룹)', 'MC'],
+    iDate:  ['일'],
+    iQty:   ['판매수량'],
+  });
+  const _foundHdr = _hdrResult.hdr >= 0 ? _hdrResult.hdr : hdr;
+  let iStore = _hdrResult.cols.iStore;
+  let iStyle = _hdrResult.cols.iStyle;
+  let iMch2  = _hdrResult.cols.iMch2;
+  let iMC    = _hdrResult.cols.iMC;
+  let iDate  = _hdrResult.cols.iDate;
+  let iQty   = _hdrResult.cols.iQty;
+  hdr = _foundHdr;
+  
+  // 매핑 결과 로그
+  dbg(`컬럼 매핑: 지점=${iStore} 스타일=${iStyle} MCH2=${iMch2} MC=${iMC} 일자=${iDate} 수량=${iQty}`);
+  
+  // 매핑 실패 시 마지막 안전망 (모든 매칭 실패 시에만)
+  if (iStore < 0) { dbg('⚠ 지점 컬럼 매핑 실패 → 0번 시도'); iStore = 0; }
+  if (iMC < 0) { dbg('⚠ MC 컬럼 매핑 실패 → 2번 시도'); iMC = 2; }
+  if (iMch2 < 0) { dbg('⚠ MCH2 컬럼 매핑 실패 → 4번 시도'); iMch2 = 4; }
+  if (iStyle < 0) { dbg('⚠ 스타일 컬럼 매핑 실패 → 8번 시도'); iStyle = 8; }
+  if (iDate < 0) { dbg('⚠ 일자 컬럼 매핑 실패 → 16번 시도'); iDate = 16; }
+  if (iQty < 0) { dbg('⚠ 판매수량 컬럼 매핑 실패 → 22번 시도'); iQty = 22; }
+  
+  dbg(`기간: ${startDate||'전체시작'} ~ ${endDate||'전체끝'}`);
+  
+  const allDates = new Set();
+  const sales={}, recentSales={};
+  const catStore4w={}, catStore1m={}, catStoreTotal={};
+  const stylePlant4w={};
+  const mcStorePlant={}; // v7+: 매장×MC×판매수량 (분배 단위) → mcStorePlant[plant][mc] = qty
+  
+  let used = 0, dropPeriod = 0, dropPlant = 0, dropCat = 0;
+  
+  for (let i=hdr+1;i<rows.length;i++) {
+    const r=rows[i]; if(!r||!r[iStyle]) continue;
+    const dRaw = r[iDate];
+    if (!dRaw) continue;
+    let dStr = (dRaw instanceof Date) 
+      ? `${dRaw.getFullYear()}-${String(dRaw.getMonth()+1).padStart(2,'0')}-${String(dRaw.getDate()).padStart(2,'0')}`
+      : String(dRaw).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dStr)) continue;
+    
+    // 기간 필터
+    if (startDate && dStr < startDate) { dropPeriod++; continue; }
+    if (endDate && dStr > endDate) { dropPeriod++; continue; }
+    
+    allDates.add(dStr);
+    
+    const style = String(r[iStyle]).trim();
+    const plant = extractPlant(String(r[iStore]||''));
+    if (!plant || !STORES[plant]) { dropPlant++; continue; }
+    const mch2 = String(r[iMch2]||'').trim();
+    const cat = MCH2_QUOTA_CAT[mch2] || MCH2_CAT[mch2] || '';
+    if (!cat) { dropCat++; continue; }
+    const mcVal = String(r[iMC]||'').trim(); // v7+: MC 단위 집계용
+    
+    const qty = parseFloat(r[iQty]) || 0;
+    if (qty <= 0) continue;
+    
+    // 전체 매출 (sales)
+    if (!sales[style]) sales[style]={};
+    sales[style][plant]=(sales[style][plant]||0)+qty;
+    // recentSales = 전체와 동일 (이미 기간 필터됨)
+    if (!recentSales[style]) recentSales[style]={};
+    recentSales[style][plant]=(recentSales[style][plant]||0)+qty;
+    
+    // 카테고리 집계 (반응 분배용) — 4w/1m/total 모두 동일 (기간이 필터됨)
+    if (!catStore4w[plant]) catStore4w[plant]={};
+    if (!catStore1m[plant]) catStore1m[plant]={};
+    if (!catStoreTotal[plant]) catStoreTotal[plant]={};
+    catStore4w[plant][cat]=(catStore4w[plant][cat]||0)+qty;
+    catStore1m[plant][cat]=(catStore1m[plant][cat]||0)+qty;
+    catStoreTotal[plant][cat]=(catStoreTotal[plant][cat]||0)+qty;
+    
+    if (!stylePlant4w[style]) stylePlant4w[style]={};
+    stylePlant4w[style][plant]=(stylePlant4w[style][plant]||0)+qty;
+    
+    // v7+: 매장×MC 판매수량 집계 (MC 단위 분배 기준)
+    if (mcVal) {
+      if (!mcStorePlant[plant]) mcStorePlant[plant]={};
+      mcStorePlant[plant][mcVal]=(mcStorePlant[plant][mcVal]||0)+qty;
+    }
+    
+    used++;
+  }
+  
+  const sortedDates = Array.from(allDates).sort();
+  dbg(`기간 일자: ${sortedDates.length}일 (${sortedDates[0]||'-'} ~ ${sortedDates[sortedDates.length-1]||'-'})`);
+  dbg(`처리 ${used}행 · 기간외 ${dropPeriod} · 매장미식별 ${dropPlant} · 카테고리미식별 ${dropCat}`);
+  
+  return {
+    sales, recentSales, catStore4w, catStore1m, catStoreTotal, stylePlant4w,
+    mcStorePlant,  // v7+: 매장×MC×수량
+    dateLabels: sortedDates, totalDays: sortedDates.length
+  };
+}
+
+// ── 모드별 분배 기간 결정 ──
+// 매출상세분석의 일자 범위와 모드/마지막 분배일을 보고 추출 시작/끝 결정
+function determineSalesPeriod(wb, mode) {
+  // 매출상세분석에서 가용한 일자 범위 먼저 스캔
+  const ws = selectSheet(wb, '매출상세분석', '매출');
+  const rows = sheetToRows(ws);
+  let hdr = -1;
+  for (let i=0;i<rows.length;i++) {
+    if (rows[i] && rows[i].some(v => String(v||'').indexOf('MCH2') >= 0)) { hdr = i; break; }
+  }
+  if (hdr < 0) {
+    for (let i=0; i<Math.min(15, rows.length); i++) {
+      const r = rows[i]; if (!r) continue;
+      let hasDate = false, hasMC = false;
+      for (const v of r) {
+        if (!v) continue;
+        let s = (v instanceof Date) 
+          ? `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`
+          : String(v).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) hasDate = true;
+        if (/^[0-9][A-Z]{2}[A-Z0-9]{3}$/i.test(s)) hasMC = true;
+      }
+      if (hasDate && hasMC) { hdr = i - 1; break; }
+    }
+  }
+  if (hdr < 0) return {start:null, end:null, info:'헤더 못찾음'};
+  
+  const h = rows[hdr] || [];
+  let iDate = h.findIndex(v => String(v||'').trim() === '일');
+  if (iDate < 0) iDate = 16;
+  
+  const allDates = new Set();
+  for (let i=hdr+1;i<rows.length;i++) {
+    const r=rows[i]; if(!r) continue;
+    const dRaw = r[iDate]; if (!dRaw) continue;
+    let dStr = (dRaw instanceof Date) 
+      ? `${dRaw.getFullYear()}-${String(dRaw.getMonth()+1).padStart(2,'0')}-${String(dRaw.getDate()).padStart(2,'0')}`
+      : String(dRaw).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dStr)) continue;
+    allDates.add(dStr);
+  }
+  const sortedDates = Array.from(allDates).sort();
+  if (sortedDates.length === 0) return {start:null, end:null, info:'일자 없음'};
+  
+  // D-1 = 매출 파일의 마지막 날 (=오늘 직전 영업일)
+  const d1 = sortedDates[sortedDates.length - 1];
+  
+  if (mode === 'daily') {
+    // 데일리: 마지막 분배일 다음날 ~ D-1 (공휴일/주말 자동 누적)
+    // 첫 실행이거나 lastDist 정보 없으면 → 월요일 분배는 금/토/일 3일치, 평일은 D-1만
+    const lastDist = localStorage.getItem('opr_v7_lastDistDate_daily');
+    if (lastDist && lastDist < d1) {
+      // lastDist 다음날부터 D-1까지
+      const ld = new Date(lastDist + 'T00:00:00');
+      ld.setDate(ld.getDate() + 1);
+      const start = `${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
+      return {start, end:d1, info:`데일리 (마지막 분배 ${lastDist} 이후 → ${start}~${d1})`};
+    }
+    // 첫 실행: 오늘 요일 기반 fallback
+    const todayDow = new Date().getDay(); // 0=일~6=토
+    let start = d1;
+    if (todayDow === 1) {
+      // 월요일 분배 → 금/토/일 3일치
+      const d1Date = new Date(d1 + 'T00:00:00');
+      const fri = new Date(d1Date); fri.setDate(fri.getDate() - 2);
+      start = `${fri.getFullYear()}-${String(fri.getMonth()+1).padStart(2,'0')}-${String(fri.getDate()).padStart(2,'0')}`;
+    }
+    return {start, end:d1, info:`데일리 첫 실행 (${start}~${d1})`};
+  } else {
+    // 주2회: 마지막 분배일 다음날 ~ D-1
+    const lastDist = localStorage.getItem('opr_v7_lastDistDate_weekly');
+    if (lastDist) {
+      // lastDist 다음날부터
+      const ld = new Date(lastDist + 'T00:00:00');
+      ld.setDate(ld.getDate() + 1);
+      const start = `${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}-${String(ld.getDate()).padStart(2,'0')}`;
+      return {start, end:d1, info:`주2회 (마지막 분배 ${lastDist} 이후 → ${start}~${d1})`};
+    } else {
+      // 첫 실행: 매출 파일 전체 사용
+      return {start:sortedDates[0], end:d1, info:`주2회 첫 실행 (전체 ${sortedDates[0]}~${d1})`};
+    }
+  }
+}
+
+
+// ── 엑셀 생성 ──────────────────────────────────────────────────────────
+function buildExcel(results, similar) {
+  const wb = XLSX.utils.book_new();
+  const today = new Date().toISOString().slice(0,10);
+  const dow = ['일','월','화','수','목','금','토'][new Date().getDay()];
+
+  // SAP 업로드용
+  const sap=[['상품코드','플랜트','수량'],['','','']];
+  for (const r of results) {
+    const q = getAdjustedQty(r.mat, r.plant, r.qty);
+    if (q > 0) sap.push([r.mat, r.plant, q]);
+  }
+  const ws1=XLSX.utils.aoa_to_sheet(sap);
+  ws1['!cols']=[{wch:25},{wch:10},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws1,'분배장(SAP업로드)');
+
+  // 상세내역
+  const det=[['구분','상품코드','브랜드','브랜드명','MC','상품명','카테고리','시즌','계절월','출고우선순위','매장명','플랜트','배정수량','가용재고','적정재고','현재재고','이동평균가','날씨가중치','유사스타일']];
+  for (const r of results) {
+    const q = getAdjustedQty(r.mat, r.plant, r.qty);
+    det.push([r.dist_type==='init'?'초도':'반응', r.mat, r.brand||'', r.brand_name||'', r.mc||'', r.name, r.cat, r.season,
+      r.season_month||'', r.season_month_label||'', r.store_name, r.plant, q,
+      r.avail_qty||'', r.optimal_stock||'', r.current_stock||'',
+      Math.round(r.avg_price), (r.weather_mult||1.0).toFixed(1)+'x', r.is_similar?'유사':'']);
+  }
+  const ws2=XLSX.utils.aoa_to_sheet(det);
+  XLSX.utils.book_append_sheet(wb,ws2,'분배상세내역');
+
+  // 유사스타일
+  if (similar.length) {
+    const sim=[['원본코드','원본상품명','대체코드','대체상품명','카테고리','매장','매칭조건','이유']];
+    for (const s of similar) sim.push([s.orig_mat,s.orig_name,s.sim_mat,s.sim_name,s.cat,s.store_name||'',s.match_label||'',s.reason]);
+    const ws3=XLSX.utils.aoa_to_sheet(sim);
+    XLSX.utils.book_append_sheet(wb,ws3,'유사스타일내역');
+  }
+
+  // 매장별 현황
+  const storeStat={};
+  for (const r of results) {
+    if (!storeStat[r.plant]) storeStat[r.plant]={};
+    const q = getAdjustedQty(r.mat, r.plant, r.qty);
+    storeStat[r.plant][r.cat]=(storeStat[r.plant][r.cat]||0)+q;
+  }
+  const storeRows=[['플랜트','매장명','여성','남성','골드라벨(여)','골드라벨(남)','잡화','슈즈','아동','합계']];
+  for (const [plant,info] of Object.entries(STORES)) {
+    const s=storeStat[plant]||{};
+    const total=Object.values(s).reduce((a,b)=>a+b,0);
+    storeRows.push([plant,info.name,s['여성']||0,s['남성']||0,s['골드라벨(여)']||0,s['골드라벨(남)']||0,s['잡화']||0,s['슈즈']||0,s['아동']||0,total]);
+  }
+  const ws4=XLSX.utils.aoa_to_sheet(storeRows);
+  XLSX.utils.book_append_sheet(wb,ws4,'매장별현황');
+  return {wb, today, dow};
+}
+
+function getAdjustedQty(mat, plant, defaultQty) {
+  const el = document.getElementById(`qty-${mat}-${plant}`);
+  if (el) return parseInt(el.value)||0;
+  return defaultQty;
+}
+
+// ── 실행 ──────────────────────────────────────────────────────────────
+async function runDistribution() {
+  hideError();
+  const btn=document.getElementById('run-btn');
+  const spinner=document.getElementById('spinner');
+  const btnText=document.getElementById('btn-text');
+  const progressBox=document.getElementById('progress-box');
+  btn.disabled=true; spinner.classList.add('show'); btnText.textContent='처리 중...';
+  progressBox.classList.add('show');
+  document.getElementById('log-lines').innerHTML='';
+  setProgress(0);
+  try {
+    log('// 파일 읽는 중...','info'); setProgress(8); await tick();
+    const [wbInv, wbSales, wbAvail] = await Promise.all([readXLSX(files.inv), readXLSX(files.sales), readXLSX(files.avail)]);
+    log('✓ 파일 로드 완료','ok'); setProgress(18); await tick();
+
+    log('// 일재고분석 파싱 중...','info');
+    const inv = parseInventory(wbInv);
+    window._invData = inv;
+    log(`✓ 매장재고 ${Object.keys(inv).length}개 스타일`,'ok');
+    
+    // v7+: 추가 일재고 파일들에서 자재코드→계절월 매핑 추출 (가용재고 매핑용)
+    const styleSeasonMonth = {};  // SKU → season_month
+    // 메인 inv에서 먼저 매핑 추출
+    for (const [sty, info] of Object.entries(inv)) {
+      if (info.season_month && !styleSeasonMonth[sty]) {
+        styleSeasonMonth[sty] = info.season_month;
+      }
+    }
+    // inv2, inv3에서 추가 매핑
+    for (const fkey of ['inv2','inv3']) {
+      if (!files[fkey]) continue;
+      try {
+        const wb = await readXLSX(files[fkey]);
+        const wsName = wb.SheetNames.find(n => n.includes('일재고')) || wb.SheetNames[wb.SheetNames.length-1];
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wsName], {header:1, defval:null, raw:false});
+        let hdr = -1;
+        for (let i=0; i<10; i++) if (rows[i] && rows[i].some(v => String(v||'').includes('MCH2'))) { hdr = i; break; }
+        if (hdr < 0) { log(`⚠ ${fkey} 헤더 못찾음 → 스킵`,'warn'); continue; }
+        const h = rows[hdr] || [];
+        const styCol = h.findIndex(v => String(v||'').includes('스타일코드'));
+        const smCol  = h.findIndex(v => String(v||'').includes('계절월'));
+        if (styCol < 0 || smCol < 0) { log(`⚠ ${fkey} 스타일/계절월 컬럼 못찾음 → 스킵`,'warn'); continue; }
+        let added = 0;
+        for (let i=hdr+1; i<rows.length; i++) {
+          const r = rows[i]; if (!r) continue;
+          const sty = String(r[styCol]||'').trim();
+          const sm  = String(r[smCol]||'').trim();
+          if (sty && sm && !styleSeasonMonth[sty]) {
+            styleSeasonMonth[sty] = sm;
+            added++;
+          }
+        }
+        log(`✓ ${fkey} 계절월 매핑 ${added}개 추가`,'ok');
+      } catch(e) {
+        log(`⚠ ${fkey} 처리 실패: ${e.message}`,'warn');
+      }
+    }
+    log(`✓ 자재코드→계절월 매핑 총 ${Object.keys(styleSeasonMonth).length}개`,'ok');
+    window._styleSeasonMonth = styleSeasonMonth;
+    setProgress(30); await tick();
+
+    log('// 매출상세분석 파싱 중...','info');
+    let salesData = parseSales(wbSales);
+    window._salesData = salesData;
+    log(`✓ 판매데이터 ${Object.keys(salesData.sales).length}개 스타일`,'ok');
+    setProgress(45); await tick();
+
+    log('// 가용재고 파싱 중...','info');
+    let availStock = parseAvailableStock(wbAvail);
+    if (files.avail2) {
+      const wbAvail2 = await readXLSX(files.avail2);
+      const availStock2 = parseAvailableStock(wbAvail2);
+      // 합산: 스타일 기준으로 수량 합치기
+      for (const [style, info2] of Object.entries(availStock2)) {
+        if (!availStock[style]) {
+          availStock[style] = {...info2};
+        } else {
+          availStock[style].total_qty += info2.total_qty;
+          // 하나라도 출고이력 있으면 반응
+          if (!info2.is_new) availStock[style].is_new = false;
+        }
+      }
+      log('✓ 가용재고 2개 파일 합산 완료','ok');
+    }
+    
+    // v7+: 자재코드→계절월 매핑을 가용재고에 적용 (가용재고 자체엔 계절월 정보 없음)
+    let smApplied = 0, smMissing = 0;
+    for (const [sku, info] of Object.entries(availStock)) {
+      const sm = styleSeasonMonth[sku];
+      if (sm) {
+        info.season_month = sm;
+        smApplied++;
+      } else {
+        smMissing++;
+      }
+    }
+    log(`✓ 가용재고에 계절월 매핑: 성공 ${smApplied}개 / 매핑실패 ${smMissing}개`,'ok');
+    
+    const availTotal = Object.values(availStock).reduce((s,v)=>s+v.total_qty,0);
+    const newCount = Object.values(availStock).filter(v=>v.is_new).length;
+    log(`✓ 가용재고 ${Object.keys(availStock).length}개 스타일 / 총 ${availTotal.toLocaleString()}개`,'ok');
+    log(`  초도 ${newCount}개 / 반응 ${Object.keys(availStock).length-newCount}개`,'ok');
+    setProgress(58); await tick();
+
+    setProgress(65); await tick();
+
+    log('// 날씨 정보 조회 중 (서울)...','info');
+    weatherCtx = await fetchWeather();
+    if (weatherCtx) {
+      const tr = weatherCtx.trend>=0?'▲'+weatherCtx.trend.toFixed(1):'▼'+Math.abs(weatherCtx.trend).toFixed(1);
+      log(`✓ 현재기온 ${weatherCtx.cur}°C (${tr}°C)`,'ok');
+    } else log('⚠ 날씨 정보 없음','warn');
+    setProgress(73); await tick();
+
+    log('// 분배 로직 실행 중...','info'); await tick();
+    
+    // v7: 매장 선택 검증
+    if (!appSettings.selectedStores || appSettings.selectedStores.length === 0) {
+      // selectedStores가 비어있으면 모든 매장 자동 선택
+      appSettings.selectedStores = Object.keys(STORES);
+    }
+    const _selStores = appSettings.selectedStores.map(p=>STORES[p]?.name||p).join(', ');
+    log(`// 분배 대상 매장: ${_selStores}`, 'info');
+    
+    // v7 핵심: 모드에 따라 매출 추출 기간만 다르게 (분배 로직은 v6 distribute 동일)
+    // - 주2회: 마지막 분배일 다음날 ~ D-1
+    // - 데일리: D-1 (월요일이면 금/토/일 3일치)
+    // 옵션 3: 활성화 시 보정 로직으로 mcStorePlant 직접 생성
+    const opt3On = document.getElementById('cfg-opt3-on')?.checked;
+    if (opt3On) {
+      // UI에서 설정값 수집
+      const targetDates = Array.from(document.querySelectorAll('.opt3-date-cb:checked')).map(cb => cb.value);
+      if (targetDates.length === 0) {
+        log('⚠ 옵션 3 활성화됐지만 분배 일자 미선택 — 일반 매출 모드로 fallback','warn');
+      } else {
+        const opt3Cfg = {
+          targetDates,
+          recentWeight: parseFloat(document.getElementById('cfg-opt3-weight').value) || 2.0,
+          trendPct: parseFloat(document.getElementById('cfg-opt3-trend').value) || 0,
+          childPct: parseFloat(document.getElementById('cfg-opt3-child').value) || 0,
+          childDates: (document.getElementById('cfg-opt3-child-dates').value||'').split(',').map(s=>s.trim()).filter(s=>s),
+          holidayMap: {},
+          mc1Map: {},
+        };
+        // 연휴 보정 파싱
+        const holidayText = document.getElementById('cfg-opt3-holiday').value || '';
+        for (const line of holidayText.split('\n')) {
+          const m = line.trim().match(/^(\d{4}-\d{2}-\d{2})\s*=\s*(-?\d+(?:\.\d+)?)$/);
+          if (m) opt3Cfg.holidayMap[m[1]] = parseFloat(m[2]);
+        }
+        // MC1 날씨 보정 파싱
+        const mc1Text = document.getElementById('cfg-opt3-mc1').value || '';
+        for (const line of mc1Text.split('\n')) {
+          const m = line.trim().match(/^(.+?)\s*=\s*(-?\d+(?:\.\d+)?)$/);
+          if (m) opt3Cfg.mc1Map[m[1].trim()] = parseFloat(m[2]);
+        }
+        
+        log(`// 옵션 3 적용: 분배일 ${targetDates.length}개 / 트렌드 ${opt3Cfg.trendPct}% / 가중치 ${opt3Cfg.recentWeight}배`,'info');
+        log(`//   MC1 보정: ${Object.keys(opt3Cfg.mc1Map).length}건 / 연휴 보정: ${Object.keys(opt3Cfg.holidayMap).length}건 / 아동 +${opt3Cfg.childPct}% (${opt3Cfg.childDates.length}일)`,'info');
+        
+        const opt3Result = applyOpt3Forecast(wbSales, opt3Cfg);
+        if (opt3Result.error) {
+          log(`⚠ 옵션 3 실패: ${opt3Result.error} → 일반 매출 모드로 fallback`,'warn');
+        } else {
+          // 기존 salesData를 옵션3 결과로 교체 (mcStorePlant만)
+          // 다른 필드(sales, recentSales, catStore4w 등)는 parseSales 결과 유지
+          salesData.mcStorePlant = opt3Result.mcStorePlant;
+          
+          // 분배 합계 미리 계산해서 로그
+          let total = 0;
+          for (const mcs of Object.values(opt3Result.mcStorePlant)) {
+            for (const q of Object.values(mcs)) total += q;
+          }
+          log(`✓ 옵션 3 매출 예측: ${Math.round(total).toLocaleString()}개 (${opt3Result.totalDays}일 베이스 / ${opt3Result.dateRange.join(' ~ ')})`,'ok');
+          
+          // 옵션 3 모드에서는 기존 기간 추출 스킵
+          let distResult = await new Promise(resolve => setTimeout(() => resolve(distribute(inv, salesData, availStock, weatherCtx)), 50));
+          
+          // 선택된 매장만 필터링
+          const _allowedSet = new Set(appSettings.selectedStores);
+          distResult.results = distResult.results.filter(r => _allowedSet.has(r.plant));
+          distResult.initCount = distResult.results.filter(r=>r.dist_type==='init').length;
+          distResult.reactCount = distResult.results.filter(r=>r.dist_type==='react').length;
+          distResult.initQty = distResult.results.filter(r=>r.dist_type==='init').reduce((s,r)=>s+r.qty,0);
+          distResult.reactQty = distResult.results.filter(r=>r.dist_type==='react').reduce((s,r)=>s+r.qty,0);
+          
+          // 결과 처리는 아래 일반 흐름과 동일하게 가도록 변수에 담음
+          window._distResult = distResult;
+          window._opt3Used = true;
+        }
+      }
+    }
+    
+    let distResult;
+    let period = null;  // 분배일 저장용 (single mode)
+    if (window._opt3Used) {
+      distResult = window._distResult;
+      window._opt3Used = false;
+    } else if (appSettings.distMode === 'all') {
+      // 자유 선택 모드: 선택된 매장의 mode 속성에 따라 자동으로 매출 기간 분리 적용
+      const selectedSet = new Set(appSettings.selectedStores);
+      const dailyPlants = new Set(
+        Object.entries(STORES)
+          .filter(([p,s]) => (s.mode||'weekly') === 'daily' && selectedSet.has(p))
+          .map(([p]) => p)
+      );
+      const weeklyPlants = new Set(
+        Object.entries(STORES)
+          .filter(([p,s]) => (s.mode||'weekly') === 'weekly' && selectedSet.has(p))
+          .map(([p]) => p)
+      );
+      const hasDaily = dailyPlants.size > 0;
+      const hasWeekly = weeklyPlants.size > 0;
+      
+      log(`// 매장 모드 분리: 데일리 ${dailyPlants.size}개 / 주2회 ${weeklyPlants.size}개`,'info');
+      
+      let dailyPeriod = null, weeklyPeriod = null;
+      let dailySales = null, weeklySales = null;
+      
+      if (hasDaily) {
+        dailyPeriod = determineSalesPeriod(wbSales, 'daily');
+        log(`  데일리 매출: ${dailyPeriod.info}`,'info');
+        if (dailyPeriod.start && dailyPeriod.end) {
+          dailySales = extractSalesByPeriod(wbSales, dailyPeriod.start, dailyPeriod.end);
+        }
+      }
+      if (hasWeekly) {
+        weeklyPeriod = determineSalesPeriod(wbSales, 'weekly');
+        log(`  주2회 매출: ${weeklyPeriod.info}`,'info');
+        if (weeklyPeriod.start && weeklyPeriod.end) {
+          weeklySales = extractSalesByPeriod(wbSales, weeklyPeriod.start, weeklyPeriod.end);
+        }
+      }
+      
+      // mcStorePlant 합치기: 데일리 plant는 dailySales / 주2회 plant는 weeklySales
+      const mergedMcStorePlant = {};
+      if (dailySales && dailySales.mcStorePlant) {
+        for (const [plant, mcs] of Object.entries(dailySales.mcStorePlant)) {
+          if (dailyPlants.has(plant)) mergedMcStorePlant[plant] = mcs;
+        }
+      }
+      if (weeklySales && weeklySales.mcStorePlant) {
+        for (const [plant, mcs] of Object.entries(weeklySales.mcStorePlant)) {
+          if (weeklyPlants.has(plant)) mergedMcStorePlant[plant] = mcs;
+        }
+      }
+      
+      salesData = weeklySales || dailySales || salesData;
+      salesData.mcStorePlant = mergedMcStorePlant;
+      
+      const totalMcQty = Object.values(mergedMcStorePlant).reduce((s, mcs) => s + Object.values(mcs).reduce((a,b)=>a+b, 0), 0);
+      log(`✓ 합산: ${Object.keys(mergedMcStorePlant).length}개 매장 / 총 매출 수요 ${Math.round(totalMcQty).toLocaleString()}개`,'ok');
+      
+      distResult = await new Promise(resolve => setTimeout(() => resolve(distribute(inv, salesData, availStock, weatherCtx)), 50));
+      
+      const _allowedSet = new Set(appSettings.selectedStores);
+      distResult.results = distResult.results.filter(r => _allowedSet.has(r.plant));
+      distResult.initCount = distResult.results.filter(r=>r.dist_type==='init').length;
+      distResult.reactCount = distResult.results.filter(r=>r.dist_type==='react').length;
+      distResult.initQty = distResult.results.filter(r=>r.dist_type==='init').reduce((s,r)=>s+r.qty,0);
+      distResult.reactQty = distResult.results.filter(r=>r.dist_type==='react').reduce((s,r)=>s+r.qty,0);
+      
+      window._allModePeriods = {dailyPeriod, weeklyPeriod};
+    } else {
+      period = determineSalesPeriod(wbSales, appSettings.distMode);
+      log(`// 매출 기간: ${period.info}`,'info');
+      if (period.start && period.end) {
+        // 모드별 기간 매출로 salesData 재추출 (parseSales와 동일 형태)
+        const periodSales = extractSalesByPeriod(wbSales, period.start, period.end);
+        log(`✓ 기간 매출 추출: ${periodSales.totalDays}일 / ${Object.keys(periodSales.sales).length}개 스타일`,'ok');
+        // 기존 salesData를 기간 매출로 교체
+        salesData = periodSales;
+      } else {
+        log(`⚠ 기간 결정 실패 → 전체 매출 사용`,'warn');
+      }
+      
+      distResult = await new Promise(resolve => setTimeout(() => resolve(distribute(inv, salesData, availStock, weatherCtx)), 50));
+      
+      // 선택된 매장만 필터링
+      const _allowedSet = new Set(appSettings.selectedStores);
+      distResult.results = distResult.results.filter(r => _allowedSet.has(r.plant));
+      distResult.initCount = distResult.results.filter(r=>r.dist_type==='init').length;
+      distResult.reactCount = distResult.results.filter(r=>r.dist_type==='react').length;
+      distResult.initQty = distResult.results.filter(r=>r.dist_type==='init').reduce((s,r)=>s+r.qty,0);
+      distResult.reactQty = distResult.results.filter(r=>r.dist_type==='react').reduce((s,r)=>s+r.qty,0);
+    }
+    
+    const {results, similar, initCount, reactCount, initQty, reactQty} = distResult;
+    const totalQty = results.reduce((s,r)=>s+r.qty,0);
+    log(`✓ 초도 분배: ${initCount}건 / ${initQty.toLocaleString()}개`,'ok');
+    log(`✓ 반응 분배: ${reactCount}건 / ${reactQty.toLocaleString()}개`,'ok');
+    const totalOut = initQty + reactQty;
+    if (totalOut > 0) log(`  비율: 초도 ${Math.round(initQty/totalOut*100)}% : 반응 ${Math.round(reactQty/totalOut*100)}%`,'info');
+    log(`✓ 총 배정: ${results.length}건 / ${totalQty.toLocaleString()}개`,'ok');
+    if (similar.length) log(`⚠ 유사스타일 대체: ${similar.length}건`,'warn');
+
+    setProgress(90); await tick();
+
+    log('// 엑셀 생성 중...','info');
+    const {wb, today, dow} = buildExcel(results, similar);
+    resultData = {wb, results, similar, initCount, reactCount, initQty, reactQty, today, dow, totalQty, availTotal};
+    setProgress(100); log('✓ 완료!','ok'); await tick();
+
+    // v7: 분배 완료 시 마지막 분배일 저장 (다음 분배 시 사용)
+    if (appSettings.distMode === 'all' && window._allModePeriods) {
+      // 전체 모드: 양쪽 모두 갱신
+      try {
+        const {dailyPeriod, weeklyPeriod} = window._allModePeriods;
+        if (dailyPeriod && dailyPeriod.end) {
+          localStorage.setItem('opr_v7_lastDistDate_daily', dailyPeriod.end);
+          log(`✓ 마지막 데일리 분배일 저장: ${dailyPeriod.end}`,'ok');
+        }
+        if (weeklyPeriod && weeklyPeriod.end) {
+          localStorage.setItem('opr_v7_lastDistDate_weekly', weeklyPeriod.end);
+          log(`✓ 마지막 주2회 분배일 저장: ${weeklyPeriod.end}`,'ok');
+        }
+        window._allModePeriods = null;
+      } catch(e) {}
+    } else if (period && period.end) {
+      try {
+        const storageKey = appSettings.distMode === 'daily' 
+          ? 'opr_v7_lastDistDate_daily' 
+          : 'opr_v7_lastDistDate_weekly';
+        localStorage.setItem(storageKey, period.end);
+        log(`✓ 마지막 ${appSettings.distMode==='daily'?'데일리':'주2회'} 분배일 저장: ${period.end}`,'ok');
+      } catch(e) {}
+    }
+
+    showPanel('result', document.getElementById('nav-result'));
+    renderResult();
+    XLSX.writeFile(wb, `OPR_분배장_${today}_${dow}.xlsx`);
+    log('✓ 엑셀 다운로드 완료','ok');
+  } catch(e) {
+    showError('오류 발생: ' + e.message);
+    log('✗ '+e.message,'err');
+    console.error(e);
+  } finally {
+    btn.disabled=false; spinner.classList.remove('show'); btnText.textContent='분배 실행';
+  }
+}
+
+// ── 결과 렌더링 ──────────────────────────────────────────────────────
+function renderResult() {
+  if (!resultData) return;
+  const {results, similar, initCount, reactCount, initQty, reactQty, totalQty, availTotal} = resultData;
+  document.getElementById('no-result').style.display='none';
+  document.getElementById('result-box').style.display='block';
+  
+  // v7: 분배 모드 배너 렌더링
+  const modeBanner = document.getElementById('result-mode-banner');
+  if (modeBanner) {
+    const isDaily = appSettings.distMode === 'daily';
+    const icon = document.getElementById('result-mode-icon');
+    const text = document.getElementById('result-mode-text');
+    const meta = document.getElementById('result-mode-meta');
+    if (icon) icon.textContent = isDaily ? '🟢' : '🔵';
+    if (text) text.textContent = isDaily ? '데일리 분배 (모델점)' : '주 2회 분배';
+    if (meta) {
+      const targetStores = (appSettings.selectedStores||[]).length;
+      const dt = new Date();
+      const dateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+      meta.innerHTML = isDaily 
+        ? `📅 분배일: ${dateStr} · 🏪 대상 매장: <b>${targetStores}개</b>` 
+        : `🏪 대상 매장: <b>${targetStores}개</b>`;
+    }
+    modeBanner.style.background = isDaily 
+      ? 'linear-gradient(135deg,#dcfce7 0%,#fef3f9 100%)' 
+      : 'linear-gradient(135deg,#dbeafe 0%,#fef3f9 100%)';
+  }
+  
+  document.getElementById('r-count').textContent = results.length.toLocaleString();
+  document.getElementById('r-qty').textContent = totalQty.toLocaleString();
+  const _tot = (initQty||0)+(reactQty||0);
+  document.getElementById('r-init').textContent = initCount.toLocaleString() + (_tot>0 ? ' ('+Math.round((initQty||0)/_tot*100)+'%)' : '');
+  document.getElementById('r-react').textContent = reactCount.toLocaleString() + (_tot>0 ? ' ('+Math.round((reactQty||0)/_tot*100)+'%)' : '');
+  if (availTotal) document.getElementById('r-avail-total').textContent = availTotal.toLocaleString();
+
+  // v7: 데일리 모드 — 조닝×품종별 입고 쿼터 표 (신상/이월 × 품종일치/조닝확장)
+  renderDailyZoneItemTable(results);
+
+
+  const storeStat={};
+  for (const r of results) {
+    if (!storeStat[r.plant]) storeStat[r.plant]={};
+    storeStat[r.plant][r.cat]=(storeStat[r.plant][r.cat]||0)+r.qty;
+  }
+  const tbody=document.getElementById('store-table'); tbody.innerHTML='';
+  for (const [plant,info] of Object.entries(STORES)) {
+    const s=storeStat[plant]||{};
+    const total=Object.values(s).reduce((a,b)=>a+b,0);
+    tbody.innerHTML+=`<tr><td><b>${info.name}</b></td><td style="color:var(--text3);font-size:12px">${plant}</td><td>${s['여성']||0}</td><td>${s['남성']||0}</td><td>${s['골드라벨(여)']||0}</td><td>${s['골드라벨(남)']||0}</td><td>${s['잡화']||0}</td><td>${s['슈즈']||0}</td><td>${s['아동']||0}</td><td><b>${total}</b></td></tr>`;
+  }
+
+  renderDetailTable(results);
+
+  if (similar.length) {
+    document.getElementById('similar-card').style.display='block';
+    const stb=document.getElementById('similar-table'); stb.innerHTML='';
+    for (const s of similar.slice(0,50)) {
+      stb.innerHTML+=`<tr>
+        <td><span style="font-size:11px;font-family:monospace">${s.orig_mat}</span><br><span style="font-size:11px;color:var(--text3)">${s.orig_name}</span></td>
+        <td><span style="font-size:11px;font-family:monospace">${s.sim_mat}</span><br><span style="font-size:11px;color:var(--text3)">${s.sim_name}</span></td>
+        <td>${s.cat}</td>
+        <td><span class="badge badge-ok">${s.match_label||'-'}</span></td>
+        <td style="font-size:12px;color:var(--text2)">${s.reason}</td>
+      </tr>`;
+    }
+  }
+}
+
+// v7 데일리: 조닝×품종별 입고 쿼터 표 (신상 품종일치/조닝확장 + 이월 품종일치/조닝확장)
+function renderDailyZoneItemTable(results) {
+  const wrap = document.getElementById('daily-zone-item-card');
+  // 데일리 모드가 아니면 카드 자체 숨김
+  if (!wrap) return;
+  if (appSettings.distMode !== 'daily') {
+    wrap.style.display = 'none';
+    return;
+  }
+  if (!results || results.length === 0) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  
+  // 결과를 매장×조닝×품종 단위로 집계
+  // 분류: 신상품종일치 / 신상조닝확장 / 이월품종일치 / 이월조닝확장
+  const agg = {}; // key: plant|zone|item → {newMatch, newExt, carMatch, carExt}
+  for (const r of results) {
+    const key = `${r.plant}|${r.cat}|${r.item||'기타'}`;
+    if (!agg[key]) agg[key] = {plant: r.plant, zone: r.cat, item: r.item||'기타', newMatch:0, newExt:0, carMatch:0, carExt:0};
+    const isInit = r.dist_type === 'init';
+    const isExt = String(r.season_month_label||'').includes('조닝확장');
+    if (isInit) {
+      if (isExt) agg[key].newExt += r.qty;
+      else agg[key].newMatch += r.qty;
+    } else {
+      if (isExt) agg[key].carExt += r.qty;
+      else agg[key].carMatch += r.qty;
+    }
+  }
+  
+  const rows = Object.values(agg).sort((a, b) => {
+    if (a.plant !== b.plant) return a.plant < b.plant ? -1 : 1;
+    if (a.zone !== b.zone) {
+      const order = ['여성','남성','골드라벨(여)','골드라벨(남)','잡화','슈즈','아동'];
+      return order.indexOf(a.zone) - order.indexOf(b.zone);
+    }
+    return (b.newMatch+b.newExt+b.carMatch+b.carExt) - (a.newMatch+a.newExt+a.carMatch+a.carExt);
+  });
+  
+  const fmt = v => v > 0 ? `<span style="font-weight:600;color:#1d4ed8">${v}</span>` : '<span style="color:#cbd5e1">-</span>';
+  const fmtCar = v => v > 0 ? `<span style="font-weight:600;color:#ea580c">${v}</span>` : '<span style="color:#cbd5e1">-</span>';
+  
+  const tbody = document.getElementById('daily-zone-item-tbody');
+  tbody.innerHTML = '';
+  for (const r of rows) {
+    const total = r.newMatch + r.newExt + r.carMatch + r.carExt;
+    if (total === 0) continue;
+    const newSum = r.newMatch + r.newExt;
+    const newPct = total > 0 ? Math.round(newSum/total*100) : 0;
+    const storeName = STORES[r.plant] ? STORES[r.plant].name : r.plant;
+    tbody.innerHTML += `
+      <tr>
+        <td>${storeName}</td>
+        <td>${r.zone}</td>
+        <td>${r.item}</td>
+        <td style="font-weight:700">${total}</td>
+        <td style="background:#dcfce7">${fmt(r.newMatch)}</td>
+        <td style="background:#dcfce7">${fmt(r.newExt)}</td>
+        <td style="background:#fed7aa">${fmtCar(r.carMatch)}</td>
+        <td style="background:#fed7aa">${fmtCar(r.carExt)}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden">
+              <div style="height:100%;background:#10b981;width:${newPct}%"></div>
+            </div>
+            <span style="font-size:11px;color:#10b981;font-weight:600;min-width:32px">${newPct}%</span>
+          </div>
+        </td>
+      </tr>`;
+  }
+}
+
+let detailPage=0;
+const PAGE_SIZE=200;
+let filteredResults=[];
+
+function renderDetailTable(results) {
+  const search = document.getElementById('search-result').value.toLowerCase();
+  const typeFilter = document.getElementById('filter-type').value;
+  filteredResults = results.filter(r => {
+    if (typeFilter && r.dist_type!==typeFilter) return false;
+    if (search && !r.mat.toLowerCase().includes(search) && !r.name.toLowerCase().includes(search) && !r.store_name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  detailPage=0;
+  renderDetailPage();
+}
+
+function renderDetailPage() {
+  const tbody = document.getElementById('detail-table');
+  const start = detailPage * PAGE_SIZE;
+  const end = Math.min(start+PAGE_SIZE, filteredResults.length);
+  if (detailPage===0) tbody.innerHTML='';
+  let html='';
+  for (const r of filteredResults.slice(start, end)) {
+    const typeBadge = r.dist_type==='init'
+      ? `<span class="badge badge-init">초도</span>`
+      : `<span class="badge badge-react">반응</span>`;
+    const stockStatus = r.current_stock > r.optimal_stock
+      ? `<span style="color:var(--warn);font-size:11px;font-weight:600">▲과다</span>`
+      : `<span style="color:var(--ok);font-size:11px;font-weight:600">✓적정</span>`;
+    html+=`<tr>
+      <td>${typeBadge}</td>
+      <td><span style="font-size:12px;font-family:monospace">${r.mat}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${r.brand||'-'}</td>
+      <td style="font-size:12px;font-family:monospace">${r.mc||'-'}</td>
+      <td style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.name}</td>
+      <td><span class="badge badge-gray">${r.cat}</span></td>
+      <td><span class="badge ${r.season==='SS'?'badge-ss':'badge-fw'}">${r.season}</span></td>
+      <td style="font-size:13px">${r.store_name}</td>
+      <td><input type="number" class="qty-input" id="qty-${r.mat}-${r.plant}" value="${r.qty}" min="0" onchange="onQtyChange(this)"></td>
+      <td style="font-size:12px;color:var(--blue);font-weight:600">${r.avail_qty||'-'}</td>
+      <td style="font-size:12px;color:var(--text3)">${r.optimal_stock||'-'}</td>
+      <td style="font-size:12px">${r.current_stock||'-'} ${stockStatus}</td>
+    </tr>`;
+  }
+  tbody.innerHTML += html;
+  const navEl = document.getElementById('detail-nav');
+  if (navEl) {
+    navEl.innerHTML = `<span style="font-size:12px;color:var(--text3)">${start+1}–${end} / ${filteredResults.length}건</span>
+      ${detailPage>0?`<button class="btn btn-outline btn-sm" onclick="goDetailPage(${detailPage-1})">◀ 이전</button>`:''}
+      ${end<filteredResults.length?`<button class="btn btn-outline btn-sm" onclick="goDetailPage(${detailPage+1})">다음 ▶</button>`:''}`;
+  }
+}
+
+function goDetailPage(page) {
+  detailPage=page;
+  document.getElementById('detail-table').innerHTML='';
+  renderDetailPage();
+}
+function filterResult() { if (resultData) renderDetailTable(resultData.results); }
+function onQtyChange(el) { el.classList.add('modified'); }
+function downloadExcel() {
+  if (!resultData) return;
+  const {wb,today,dow} = buildExcel(resultData.results, resultData.similar);
+  XLSX.writeFile(wb, `OPR_분배장_${today}_${dow}.xlsx`);
+}
+
+// ── 매장 관리 ────────────────────────────────────────────────────────
+function renderStoreList() {
+  const el=document.getElementById('store-list'); el.innerHTML='';
+  for (const [plant,info] of Object.entries(STORES)) {
+    const isCustom=customStores.includes(plant);
+    const mode = info.mode || 'weekly';
+    const modeBadge = mode === 'daily' 
+      ? '<span style="display:inline-block;padding:2px 8px;background:#dcfce7;color:#15803d;border-radius:10px;font-size:11px;font-weight:600;margin-left:6px">🟢 데일리</span>'
+      : '<span style="display:inline-block;padding:2px 8px;background:#dbeafe;color:#1d4ed8;border-radius:10px;font-size:11px;font-weight:600;margin-left:6px">🔵 주2회</span>';
+    el.innerHTML+=`<div class="store-item">
+      <div style="cursor:pointer;flex:1" onclick="showStoreDetail('${plant}')" title="클릭하면 매장 상세 정보">
+        <span style="font-weight:700;font-size:14px">${info.name}</span>
+        <span style="font-size:12px;color:var(--text3);margin-left:8px">플랜트 ${plant}</span>
+        ${modeBadge}
+        ${isCustom?'<span class="store-badge store-badge-new" style="margin-left:6px">신규</span>':''}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();toggleStoreMode('${plant}')" title="분배 모드 변경" style="font-size:11px">모드 변경</button>
+        <span class="store-badge">${info.cats.length}개 카테고리</span>
+        <span style="font-size:11px;color:var(--text3);cursor:pointer" onclick="showStoreDetail('${plant}')">▶ 상세보기</span>
+        ${isCustom?`<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();removeStore('${plant}')">삭제</button>`:''}
+      </div>
+    </div>`;
+  }
+}
+
+// v7: 매장 모드 토글 (주2회 ↔ 데일리)
+function toggleStoreMode(plant) {
+  if (!STORES[plant]) return;
+  const cur = STORES[plant].mode || 'weekly';
+  const next = cur === 'daily' ? 'weekly' : 'daily';
+  if (!confirm(`${STORES[plant].name}의 분배 모드를\n${cur==='daily'?'🟢 데일리':'🔵 주2회'} → ${next==='daily'?'🟢 데일리':'🔵 주2회'}\n로 변경하시겠습니까?`)) return;
+  STORES[plant].mode = next;
+  saveSettings();
+  renderStoreList();
+  // 분배 실행 패널의 매장 체크박스도 갱신
+  if (typeof renderModeUI === 'function') renderModeUI();
+}
+function calcNewStore() {
+  const w=parseFloat(document.getElementById('ns-w').value)||0,m=parseFloat(document.getElementById('ns-m').value)||0;
+  const k=parseFloat(document.getElementById('ns-k').value)||0,etc=parseFloat(document.getElementById('ns-etc').value)||0;
+  const total=w+m+k+etc,target=parseFloat(document.getElementById('ns-target').value)||0;
+  const pv=document.getElementById('ns-preview'),pc=document.getElementById('ns-preview-content');
+  if (total<=0||target<=0) {pv.style.display='none'; return;}
+  pv.style.display='block';
+  pc.innerHTML=[['여성',w],['남성',m],['아동',k],['기타',etc]].filter(([,v])=>v>0).map(([lbl,v])=>`
+    <div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0">
+      <span style="color:var(--text2)">${lbl}</span>
+      <span style="font-weight:600">${Math.round(v/total*100)}% · ${Math.round(v/total*target).toLocaleString()}원</span>
+    </div>`).join('');
+}
+function addNewStore() {
+  const name=document.getElementById('ns-name').value.trim();
+  const plant=document.getElementById('ns-plant').value.trim();
+  const mode=document.getElementById('ns-mode')?.value || 'weekly';
+  if (!name||!plant) {alert('매장명과 플랜트 번호를 입력하세요'); return;}
+  if (STORES[plant]) {alert('이미 등록된 플랜트 번호입니다'); return;}
+  STORES[plant]={name, cats:CAT_LABELS, mode};
+  customStores.push(plant);
+  saveSettings();
+  renderStoreList();
+  if (typeof renderModeUI === 'function') renderModeUI();
+  ['ns-name','ns-plant','ns-target','ns-w','ns-m','ns-k','ns-etc'].forEach(id=>{const e=document.getElementById(id); if(e)e.value='';});
+  if (document.getElementById('ns-mode')) document.getElementById('ns-mode').value='weekly';
+  document.getElementById('ns-preview').style.display='none';
+  alert(`${name} (${plant}) 등록 완료!`);
+}
+function showStoreDetail(plant) {
+  const info = STORES[plant];
+  if (!info) return;
+  // inv 데이터 없으면 기본 정보만
+  const modal = document.getElementById('store-detail-modal');
+  const title = document.getElementById('store-detail-title');
+  const body  = document.getElementById('store-detail-body');
+  title.textContent = info.name + ' (' + plant + ')';
+
+  // 현재 inv 데이터 확보
+  const invData = window._invData || {};
+  const salesData = window._salesData || {};
+
+  // 카테고리별 재고 (SS만 현재재고로 집계)
+  const catQty = {};
+  const seasonQty = {};
+  let newQty = 0, carryQty = 0; // 신상/이월
+  let totalQty = 0;
+
+  for (const [style, si] of Object.entries(invData)) {
+    const sq = (si.store_qty||{})[plant]||0;
+    if (sq<=0) continue;
+    const cat = MCH2_CAT[si.mch2]||si.mch2||'기타';
+    const season = si.season||'기타';
+    // catQty는 SS만 (현재재고 = SS 재고만)
+    if (season === 'SS') catQty[cat]=(catQty[cat]||0)+sq;
+    seasonQty[season]=(seasonQty[season]||0)+sq;
+    // 신상: season_year 앞 4자리 >= 2026
+    const yr = Math.floor(parseInt(String(si.season_year||'0').replace(/[^0-9]/g,''))||0);
+    const isNew = yr >= 20260; // 20261, 20262 등
+    if (isNew) newQty+=sq; else carryQty+=sq;
+    totalQty+=sq;
+  }
+
+  // 적정재고: 진열량 + 한달 판매량 (카테고리별)
+  const CATS_DISP = CAT_LABELS;
+  function catStatus(cat) {
+    const cur = catQty[cat]||0;
+    const disp = displayQty[info.name+'__'+cat]||0;
+    // 한달 판매량: salesData.catStore1m
+    const monthly = (salesData.catStore1m&&salesData.catStore1m[plant]&&salesData.catStore1m[plant][cat])||0;
+    const opt = disp + monthly;
+    if (opt<=0) return {cur, opt:'-', status:'unknown'};
+    // 분배 로직과 동일: cur >= opt → 과재고(출고중지)
+    const status = cur >= opt ? '과재고' : cur >= opt * 0.7 ? '적정' : '부족';
+    return {cur, opt:Math.round(opt), status};
+  }
+
+  // HTML 생성
+  let html = '';
+
+  // 카테고리별
+  html += '<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">카테고리별 재고</div>';
+  html += '<table style="width:100%;font-size:12px;border-collapse:collapse">';
+  html += '<tr style="background:var(--surface2)"><th style="padding:6px 8px;text-align:left">카테고리</th><th style="padding:6px 8px;text-align:right">현재재고</th><th style="padding:6px 8px;text-align:right">적정재고</th><th style="padding:6px 8px;text-align:center">상태</th></tr>';
+  for (const cat of CATS_DISP) {
+    if (!(catQty[cat])) continue;
+    const s = catStatus(cat);
+    const statusColor = s.status==='과재고'?'var(--warn)':s.status==='부족'?'var(--err)':'var(--ok)';
+    const statusLabel = s.status==='과재고'?'▲ 과재고':s.status==='부족'?'▼ 부족':'✓ 적정';
+    html+=`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 8px">${cat}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:600">${s.cur.toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--text3)">${s.opt==='unknown'?'-':s.opt.toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:center;color:${statusColor};font-weight:600;font-size:11px">${statusLabel}</td>
+    </tr>`;
+  }
+  html += `<tr style="background:var(--surface2);font-weight:700"><td style="padding:6px 8px">합계</td><td style="padding:6px 8px;text-align:right">${totalQty.toLocaleString()}</td><td colspan="2"></td></tr>`;
+  html += '</table></div>';
+
+  // 신상/이월 재고
+  {
+    const newPct  = totalQty>0?Math.round(newQty/totalQty*100):0;
+    const carryPct= totalQty>0?Math.round(carryQty/totalQty*100):0;
+    html += '<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">신상 / 이월 재고</div>';
+    html += '<table style="width:100%;font-size:12px;border-collapse:collapse">';
+    html += '<tr style="background:var(--surface2)"><th style="padding:6px 8px;text-align:left">구분</th><th style="padding:6px 8px;text-align:right">수량</th><th style="padding:6px 8px;text-align:right">비중</th></tr>';
+    html += `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 8px"><span style="color:var(--ok);font-weight:600">● 신상</span> <span style="font-size:11px;color:var(--text3)">2026S/S~</span></td>
+      <td style="padding:5px 8px;text-align:right;font-weight:600">${newQty.toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+          <div style="width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="width:${newPct}%;height:100%;background:var(--ok);border-radius:3px"></div>
+          </div>
+          <span style="color:var(--text3);min-width:28px;text-align:right">${newPct}%</span>
+        </div>
+      </td>
+    </tr>`;
+    html += `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 8px"><span style="color:var(--warn);font-weight:600">● 이월</span> <span style="font-size:11px;color:var(--text3)">~2025F/W</span></td>
+      <td style="padding:5px 8px;text-align:right;font-weight:600">${carryQty.toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+          <div style="width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="width:${carryPct}%;height:100%;background:var(--warn);border-radius:3px"></div>
+          </div>
+          <span style="color:var(--text3);min-width:28px;text-align:right">${carryPct}%</span>
+        </div>
+      </td>
+    </tr>`;
+    html += '</table></div>';
+  }
+
+  // 시즌별
+  html += '<div><div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">시즌별 재고</div>';
+  html += '<table style="width:100%;font-size:12px;border-collapse:collapse">';
+  html += '<tr style="background:var(--surface2)"><th style="padding:6px 8px;text-align:left">시즌</th><th style="padding:6px 8px;text-align:right">수량</th><th style="padding:6px 8px;text-align:right">비중</th></tr>';
+  for (const [season, qty] of Object.entries(seasonQty).sort((a,b)=>b[1]-a[1])) {
+    const pct = totalQty>0?Math.round(qty/totalQty*100):0;
+    html+=`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 8px">${season}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:600">${qty.toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--text3)">${pct}%</td>
+    </tr>`;
+  }
+  html += '</table></div>';
+
+  if (Object.keys(invData).length === 0) {
+    body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">📂 일재고분석 파일을 먼저 업로드하세요.</div>';
+  } else if (totalQty===0) {
+    body.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3)">해당 매장의 재고 데이터가 없습니다.</div>';
+  } else {
+    body.innerHTML = html;
+  }
+  modal.style.display='flex';
+}
+function closeStoreDetail() {
+  document.getElementById('store-detail-modal').style.display='none';
+}
+
+function removeStore(plant) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  delete STORES[plant]; customStores=customStores.filter(p=>p!==plant); renderStoreList();
+}
+
+// ── 진열량 관리 ──────────────────────────────────────────────────────
+const DISPLAY_CATS = CAT_LABELS;
+function renderDisplayTable() {
+  const tbody=document.getElementById('display-table-body'); tbody.innerHTML='';
+  for (const [plant,info] of Object.entries(STORES)) {
+    let row=`<tr><td style="font-weight:600">${info.name}</td>`;
+    for (const cat of DISPLAY_CATS) {
+      const val=displayQty[info.name+'__'+cat]||0;
+      row+=`<td><input type="number" min="0" value="${val}" id="dq-${plant}-${cat}" style="width:65px;text-align:center"></td>`;
+    }
+    row+='</tr>'; tbody.innerHTML+=row;
+  }
+}
+function saveDisplayQty() {
+  for (const [plant,info] of Object.entries(STORES)) {
+    for (const cat of DISPLAY_CATS) {
+      const el=document.getElementById('dq-'+plant+'-'+cat);
+      if (el) displayQty[info.name+'__'+cat]=parseInt(el.value)||0;
+    }
+  }
+  saveDisplayQtyToStorage(); alert('진열량이 저장되었습니다');
+}
+function saveDisplayQtyToStorage() {
+  try {localStorage.setItem('opr_display_qty', JSON.stringify(displayQty));} catch(e){}
+}
+function loadDisplayQtyFromStorage() {
+  try {const d=localStorage.getItem('opr_display_qty'); if(d) displayQty=JSON.parse(d);} catch(e){}
+}
+
+// ── 진열량 직접 테스트 ────────────────────────────────────────────────
+async function loadQuotaFile(input) {
+  const file = input.files[0]; if (!file) return;
+  const statusEl = document.getElementById('quota-load-status');
+  statusEl.textContent = '불러오는 중...';
+  statusEl.style.color = 'var(--text3)';
+  try {
+    const wb = await readXLSX(file);
+    const dq = parseQuota(wb);
+    const count = Object.keys(dq).length;
+    if (count === 0) {
+      statusEl.textContent = '⚠ 진열량 데이터를 찾지 못했습니다';
+      statusEl.style.color = 'var(--warn)';
+      return;
+    }
+    Object.assign(displayQty, dq);
+    saveDisplayQtyToStorage();
+    renderDisplayTable();
+    statusEl.textContent = '✓ ' + count + '건 불러오기 완료';
+    statusEl.style.color = 'var(--ok)';
+  } catch(e) {
+    statusEl.textContent = '오류: ' + e.message;
+    statusEl.style.color = 'var(--err)';
+    console.error(e);
+  }
+}
+
+// ── 유틸 ─────────────────────────────────────────────────────────────
+function log(msg, type='info') {
+  const el=document.getElementById('log-lines');
+  el.innerHTML+=`<div class="log-${type}">${msg}</div>`;
+  el.scrollTop=el.scrollHeight;
+}
+function setProgress(v) { document.getElementById('progress-bar').style.width=v+'%'; }
+function showError(msg) { const el=document.getElementById('error-box'); el.textContent=msg; el.classList.add('show'); }
+function hideError() { document.getElementById('error-box').classList.remove('show'); }
+function tick() { return new Promise(r=>setTimeout(r,30)); }
+
+// ── 초기화 ───────────────────────────────────────────────────────────
+loadDisplayQtyFromStorage();
+(async()=>{
+  weatherCtx = await fetchWeather();
+  if (!weatherCtx) return; // API 실패 시 배너 숨김, 가중치 1.0으로 진행
+  const banner=document.getElementById('weather-banner');
+  banner.style.display='flex';
+  const isUp=weatherCtx.trend>=0;
+  document.getElementById('w-temp').textContent=weatherCtx.cur+'°C';
+  document.getElementById('w-temp').className='w-temp '+(isUp?'w-up':'w-down');
+  document.getElementById('w-desc').textContent='서울 현재기온 · 전일 대비 '+(isUp?'▲':'▼')+Math.abs(weatherCtx.trend).toFixed(1)+'°C '+(isUp?'상승':'하락');
+  const ss=weatherMult('SS',weatherCtx), fw=weatherMult('FW',weatherCtx);
+  const dow=['일','월','화','수','목','금','토'][new Date().getDay()], dm=getDowMult();
+  document.getElementById('w-tags').innerHTML=
+    `<span class="w-tag tag-ss">SS ${ss>=1?'+':''}${Math.round((ss-1)*100)}%</span>`+
+    `<span class="w-tag tag-fw">FW ${fw>=1?'+':''}${Math.round((fw-1)*100)}%</span>`+
+    `<span class="w-tag tag-day">${dow}요일 ×${dm.toFixed(2)}</span>`+
+    `<span class="w-tag tag-init">초도/반응 자동판별</span>`;
+})();
+
+// ═══════════════════════════════════════════════════════════════════════
+// v7 모드/매장 UI 함수
+// ═══════════════════════════════════════════════════════════════════════
+function setMode(mode) {
+  // 호환성용: 기존 코드 호출에 대비. 'all'로 강제 통일
+  appSettings.distMode = 'all';
+  saveSettings();
+  renderStoreChecklist();
+  if (typeof renderHolidaysUI === 'function') renderHolidaysUI();
+}
+
+function renderModeUI() {
+  // 모드 통합 후 단순화: 매장 체크리스트만 갱신
+  renderStoreChecklist();
+}
+
+function renderStoreChecklist() {
+  const wrap = document.getElementById('store-checklist');
+  if (!wrap) return;
+  
+  // 모든 매장 활성화. 사용자가 자유롭게 체크
+  const allStores = Object.entries(STORES);
+  
+  let html = '';
+  for (const [plant, info] of allStores) {
+    const checked = appSettings.selectedStores.includes(plant);
+    const isDaily = info.mode === 'daily';
+    const badge = isDaily ? '🟢' : '🔵';
+    const bgColor = checked ? (isDaily ? '#10b981' : '#3b5bdb') : '#fff';
+    const borderColor = checked ? bgColor : 'var(--border)';
+    const titleAttr = isDaily ? '데일리 매출 적용' : '주2회 매출 적용';
+    html += `<label title="${titleAttr}" style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;background:${bgColor};color:${checked?'#fff':''};border:1.5px solid ${borderColor};border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+      <input type="checkbox" ${checked?'checked':''} onchange="toggleStore('${plant}')" style="margin:0">
+      ${badge} ${info.name}
+    </label>`;
+  }
+  wrap.innerHTML = html;
+  
+  const badge = document.getElementById('store-count-badge');
+  if (badge) badge.textContent = appSettings.selectedStores.length + '개';
+}
+
+function toggleStore(plant) {
+  const idx = appSettings.selectedStores.indexOf(plant);
+  if (idx >= 0) appSettings.selectedStores.splice(idx, 1);
+  else appSettings.selectedStores.push(plant);
+  saveSettings();
+  renderStoreChecklist();
+}
+
+function selectAllStores(select) {
+  if (select) {
+    appSettings.selectedStores = Object.keys(STORES);
+  } else {
+    appSettings.selectedStores = [];
+  }
+  saveSettings();
+  renderStoreChecklist();
+}
+
+function resetToModeDefault() {
+  selectAllStores(true);
+}
+
+// v7: 토글 ON/OFF 함수
+function toggleSetting(key) {
+  appSettings[key] = !appSettings[key];
+  saveSettings();
+  renderToggleUI();
+}
+
+function renderToggleUI() {
+  const renderToggle = (id, isOn) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.background = isOn ? '#10b981' : '#cbd5e1';
+    const knob = el.firstElementChild;
+    if (knob) knob.style.left = isOn ? '24px' : '2px';
+  };
+  renderToggle('toggle-children', !!appSettings.includeChildren);
+  renderToggle('toggle-zara', !!appSettings.includeZara);
+}
+
+// 초기화
+window.addEventListener('DOMContentLoaded', function() {
+  // selectedStores가 비었으면 현재 모드 매장 자동
+  if (!appSettings.selectedStores || appSettings.selectedStores.length === 0) {
+    appSettings.selectedStores = Object.entries(STORES)
+      .filter(([p,s]) => (s.mode||'weekly') === appSettings.distMode)
+      .map(([p]) => p);
+    saveSettings();
+  }
+  renderModeUI();
+  renderToggleUI();
+});
+</script>
+  <!-- PWA 서비스워커 등록 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(r => console.log('[PWA] SW 등록 완료:', r.scope))
+          .catch(e => console.warn('[PWA] SW 등록 실패:', e));
+      });
+    }
+  </script>
+</body>
+</html>
